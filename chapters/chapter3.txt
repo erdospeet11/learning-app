@@ -1,0 +1,84 @@
+Title: 3. Fizikai fájlszervezés, feladata, költségek, paraméterek, kupac, rendezett, hasító indexelt megoldások, módosítás, keresés, példákkal, előnyök, hátrányok.
+
+*Fizikai fájlszervezés, feladata:* 
+A fő célok a gyors lekérdezés, gyors adatmódosítás, minél kisebb tárolási terület. Nincs azonban általánosan legjobb optimalizáció, az egyik cél a másik rovására javítható (például indexek használatával csökken a keresési idő, nő a tárméret és a módosítási idő).
+
+Az adatbázis-alkalmazások alapján az adatbázis lehet:
+- Statikus: ritkán módosul, a lekérdezések gyorsasága a fontosabb.
+- Dinamikus: gyakran módosul, ritkán végzünk lekérdezést.
+
+A memória műveletek nagyságrendekkel gyorsabbak, mint a háttértárolóról való beolvasás/kiírás. Az iró-olvasó fej nagyobb adategységeket, blokkokat olvas be, melyek mérete függhet az operációs rendszertől, hardvertől, adatbáziskezelőtől. A blokkméretet fixnek tekintjük (Oracle esetén 8kB az alapértelmezés). Feltételezzük, hogy a beolvasás, kiírás költsége arányos a háttértároló és a memória között mozgatott blokkok számával.
+
+*Rekordok és blokkok felépítése:*
+Célszerű a fájlokat blokkokba szervezni. A fájl rekordokból áll, melyek szerkezete eltérő is lehet. A rekord tartalmaz:
+- Leíró fejlécet: rekordstruktúra leírása, belső/külső mutatók (hol kezdődik egy mező, melyek a kitöltetlen mezők, melyik a következő ill. előző rekord), törlési bit, statisztikák.
+- Mezőket: melyek üresek, vagy adatot tartalmaznak.
+
+A rekordhossz lehet állandó, vagy változó (változó hosszú mezők, ismétlődő mezők miatt). Az egyszerűség kedvéért feltesszük, hogy állandó hosszú rekordokból áll a fájl, melyek hossza az átlagos rekordméretnek felel meg.
+
+A blokkok tartalmaznak:
+- Leíró fejlécet: rekordok száma, struktúrája, fájlok leírása, belső/külső mutatók (hol kezdődik a rekord, hol vannak üres helyek, melyik a következő ill. az előző blokk), statisztikák (melyik fájlból hány rekord szerepel a blokkban).
+- Rekordokat: egy vagy több fájlból.
+- Üres helyeket.
+
+*Költségek, paraméterek:* 
+A költségek méréséhez paramétereket vezetünk be:
+- l: length, rekordméret (bájtokban).
+- b: blokkméret (bájtokban).
+- T: tuple, rekordok száma.
+- bf: blokkolási faktor, azaz mennyire rekord fér el egy blokkban. Egyenlő b/l alsó egészrészével.
+- B: a fájl mérete blokkokban. Egyenlő T/bf felső egészrészével.
+- M: memória mérete blokkokban.
+
+A relációs algebrai kiválasztás felbontható atomi kiválasztásokra, így elég ezek költségét vizsgálni. A legegyszerűbb kiválasztás az A=a, ahol "A" egy keresési mező, "a" pedig egy konstans. Kétféle bonyolultságot szokás vizsgálni, az átlagos és a legrosszabb esetet.
+
+Az esetek vizsgálatánál az is számít, hogy az A=a feltételnek megfelelő rekordból lehet-e több, vagy biztos, hogy csak egy lehet. Fel szoktuk tenni, hogy az A=a feltételnek eleget tevő rekordokból nagyjából egyforma számú rekord szerepel, ez az **egyenletességi feltétel**.
+
+Az A oszlopban szereplő különböző értékek számát **képméretnek** hívjuk, és I(A)-val jelöljük. A képméret egyenlő |∏A(R)|-el. Egyenletességi feltétel esetén T(σA=a(R)) = T(R) / I(A) és B(σA=a(R)) = B(R) / I(A).
+
+*Kupac:* 
+A kupac (heap) fájlok rendezetlen rekordokból állnak, ez a legegyszerűbb fájlszerkezet. A beszúrás hatékony, viszont a keresés és a törlés lassú. Egyenlőségi keresésnél átlagosan a lapok felét kell beolvasni, míg intervallum keresés esetén minden lapot be kell olvasni.
+
+A rekordokat a blokk első üres helyére tesszük, a beérkezés sorrendjében. A tárméret kupac szervezés esetén B. Az A=a keresési idő legrosszabb esetben B, átlagos esetben egyenletességi feltétel esetén B/2. A beszúrás költsége 1 olvasás + 1 írás, a frissítés költsége 1 keresés + 1 írás, és a törlés költsége 1 keresés + 1 írás (üres hely marad, vagy a törlési bitet állítják át).
+
+*Rendezett:* 
+A rendezett fájlokban a rekordok rendezetten helyezkednek el, a rendező mező szerint rendezve. Ha a rendező mező ugyanaz, mint a kulcs, rendező kulcsmezőnek nevezzük. Lassú beszúrás és törlés, viszont gyors logaritmikus keresés jellemzi.
+
+A rendezettség miatt a blokkok láncolva vannak, és a következő blokkban nagyobb értékű rekordok szerepelnek, mint az előzőben. Ha a rendező mező és a kereső mező nem esik egybe, akkor kupac szervezést jelent. Ha azonban egybeesnek, akkor bináris (logaritmikus) keresést lehet alkalmazni:
+- Beolvassuk a középső blokkot.
+- Ha nincs benne az A=a értékű rekord, akkor eldöntjük, hogy a blokklánc második felében, vagy az első felében szerepelhet-e egyáltalán.
+- Beolvassuk a felezett blokklánc középső blokkját.
+- Addig folytatjuk, amíg megtaláljuk a rekordot, vagy a vizsgálandó maradék blokklánc már csak 1 blokkból áll.
+
+Így a keresési idő log2(b).
+
+A beszúrás költsége a keresés költsége + az üres hely miatt a rekordok eltolásának költsége az összes blokkban, az adott találati blokktól kezdve (B/2 blokkot be kell olvasni, majd az eltolások után visszírni, így ez B művelet). Erre a szokásos megoldások a gyűjtő blokk használata, és az üres hely hagyása.
+
+*Gyűjtő (túlcsordulási) blokk használata:*
+- Az új rekordok számára nyitunk egy blokkot, ha betelik, hozzáláncolunk egy újabb blokkot.
+- A keresést 2 helyen végezzük: log2(B-G) költséggel keresünk a rendezett részben, és ha nem találjuk, akkor a gyűjtőben is megnézzük (G blokkművelet, ahol G a gyűjtő mérete), azaz az összköltség: log2(B-G)+G.
+- Ha a G túl nagy a log2(B)-hez képest, akkor újrarendezzük a teljes fájlt (a rendezés költsége B*log2(B)).
+
+*Üres helyeket hagyunk a blokkokban:*
+- Például félig üresek a blokkok.
+- A keresés után 1 blokkművelettel visszaírjuk a blokkot, amibe beírtuk az új rekordot.
+- Tárméret 2*B lesz.
+- Keresési idő: log2(2*B) = 1+log2(B).
+- Ha betelik egy blokk, vagy elér egy határt a telítettsége, akkor 2 blokkba osztjuk szét a rekordjait, a rendezettség fenntartásával.
+
+A törlés költsége a keresés költsége + a törlés elvégzése/törlés bit beállítása után visszaírás (1 blokkírás). Túl sok törlés után újra kell szervezni a fájlt. A frissítés költsége a törlés költsége + beszúrás költsége.
+
+*Hasító indexelt:* 
+A rekordok edényekbe (bucket) particionálva helyezkednek el, melyekre a h hasítómezőn értelmezett függvény osztja szét őket. Hatékony egyenlőségi keresés, beszúrás, és törlés jellemzi, viszont nem támogatja az intervallumos keresést.
+
+A rekordokat blokkláncokba soroljuk, és a blokklánc utolsó blokkjának első üres helyére tesszük a rekordokat a beérkezés sorrendjében. A blokkláncok száma lehet előre adott (statikus hasítás, ekkor a számot K-val jelöljük), vagy a tárolt adatok alapján változhat (dinamikus hasítás). A besorolás az indexmező értékei alapján történik. Egy h(x) ∈ {1,...,K} hasító függvény értéke mondja meg, hogy melyik kosárba tartozik a rekord, ha x volt az indexmező értéke a rekordban.
+
+A hasító függvény általában maradékos osztáson alapul (például mod(K)). Akkor jó egy hasító függvény, ha nagyjából egyforma hosszú blokkláncok keletkeznek, azaz egyenletesen sorolja be a rekordokat. Ekkor a blokklánc B/K blokkból áll.
+
+A keresés költsége:
+- Ha az indexmező és keresési mező eltér, akkor kupac szervezést jelent.
+- Ha az indexmező és keresési mező megegyezik, akkor csak elég a h(a) sorszámú kosarat végignézni, amely B/K blokkból álló kupacnak felel meg, azaz B/K legrosszabb esetben. A keresés így K-szorosára gyorsul.
+
+A tárméret B, ha minden blokk nagyjából tele van. Nagy K esetén azonban sok olyan blokklánc lehet, amely egy blokkból fog állni, és a blokkban is csak 1 rekord lesz. Ekkor a keresési idő: 1 blokkbeolvasás, de B helyett T számú blokkban tároljuk az adatokat.
+
+Módosításnál B/K blokkból álló kupac szervezésű kosarat kell módosítani.

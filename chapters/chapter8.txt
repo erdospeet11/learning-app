@@ -1,0 +1,68 @@
+Title: 8. Több tábla összekapcsolása, összekapcsolások sorrendje, futószalagosítás, materializáció, dinamikus programozási feladat, a félig-összekapcsolás (semi-join) és alkalmazása osztott lekérdezésekre.
+
+*Több tábla összekapcsolása:* 
+Egy bal-mély (jobb-mély) fa egy olyan összekapcsolási fa, amelyben a jobb oldal (bal oldal) egy reláció, nem pedig egy köztes összekapcsolás eredménye.
+
+A bokros fa se nem bal-, se nem jobb-mély.
+
+Általában elegendő a bal-mély fákat vizsgálni:
+- Kisebb keresési tér.
+- Általában hatékony bizonyos összekapcsolási algoritmusokhoz (rendezzük a relációkat a kisebbtől a nagyobbak felé).
+- Megengedi a csővezeték használatát.
+- Elkerüli a köztes eredmények megjelenését (materializálás!) a lemezen.
+
+*Összekapcsolások sorrendje:* 
+Az összekapcsolások kommutatívak és asszociatívak, azaz (A ⋈ B) ⋈ C = A ⋈ (B ⋈ C).
+
+Válasszuk azt a sorrendet, amely minimalizálja a köztes eredmények méreteinek összegét:
+- Valószínűleg I/O és számítási hatékony.
+- Ha az A ⋈ B eredménye kisebb a B ⋈ C-énél, akkor válasszuk az (A ⋈ B) ⋈ C -t.
+
+Alternatív feltételek: lemez hozzáférések, CPU, válaszidő, hálózat.
+
+Válasszuk ki az összekapcsolási fa alakját:
+- Ekvivalens az n-utas összekapcsolások lehetséges zárójelezéseinek számával.
+- Ismétlődés: T(1) = 1, T(n) = Σ T(i)T(n-i), T(6)=42
+
+A levelek permutációi (n!), azaz például n=6 esetén az összekapcsolási fák száma 42*6! (vagyis 42*720 = 30240).
+
+*Futószalagosítás, materializáció:* 
+Materializáció az, amikor egy művelet eredményét átmeneti relációként tároljuk, amelyet a következő feldolgozhat.
+
+Csővezeték vagy menet közbeni feldolgozás:
+- Az egyik művelet eredményét átadjuk egy másiknak átmeneti reláció létrehozása nélkül.
+- Megtakarítja az átmeneti reláció kiírásának és visszaolvasásának költségét.
+- Általában a csővezetéket külön folyamat vagy szál valósítja meg.
+
+A külső reláció minden rekordjához az egész belső relációt át kell nézni. A belső relációt nem lehet csővezetékbe tenni, hanem mindig materializálni kell. Ezért a bal-magas fák kívánatosak, mivel a belső relációk mindig alaprelációk. Csökkenti az optimális stratégia keresési terét, és lehetőséget ad a QO-nak a dinamikus feldolgozásra.
+
+*Dinamikus programozás:* 
+Ésszerűtlen végignézni az összes lehetséges összekapcsolási sorrendet (n!). Használjuk a legjobb tervet a (k-1)-utas összekapcsolásból a legjobb k-utas összekapcsolás kiszámításához. Mohó heurisztikus algoritmus.
+
+A legjobb összekapcsolási sorrend vagy algoritmus kiválasztása a relációk minden egyes részhalmazához nem feltétlen a legjobb döntés. A rendezéses összekapcsoló eljárások rendezhettek kimenetet ami hasznos lehet (pl. ORDER BY/GROUP BY, rendezés az összekapcsolás paraméterén).
+
+Csővezeték használata skatulyázott ciklusos összekapcsolással (pipelining with nested-loop join).
+
+1970-es évek, alapozó munka az összekapcsolási sorrend optimalizáláshoz System R-en (az IBM kutatási célú adatbázis rendszere).
+
+Az érdekes rendezési sorrend felismerése. Minden egyes rendezésnél keressük meg a legjobb tervet a relációk minden egyes részhalmazához (érdekes tulajdonságonként egy terv). Kevés érdekes sorrend esetén a költség alacsony.
+
+A legjobb összekapcsolási fa megtalálása n reláció egy halmazához:
+- Hogy megtaláljuk a legjobb összekapcsolási fát n reláció egy S halmazához, vegyük az összes lehetséges tervet mely így néz ki: S1 ⋈ (S-S1), ahol S1 az S tetszőleges nem üres részhalmaza.
+- Rekurzívan számítsuk ki S részhalmazainak összekapcsolásának költségeit, hogy meghatározzuk minden egyes terv költségét. Válasszuk a legolcsóbbat a 2^n -1 lehetséges közül.
+- Mikor bármely részhalmaz terve kiszámításra került, az újbóli kiszámítás helyett tároljuk el és hasznosítsuk újra amikor ismét szükség lesz rá.
+
+*Semi-join:* 
+Egy semijoin az A attribútumon R_i-ből R_j-be így írható le: R_j |x R_i. Arra használják, hogy csökkentse az adatátviteli költségeket.
+
+Számítási lépések:
+- Vetítsük R_i-t az A attribútumra és továbbítsuk ezt a projekciót (egy semi-join projekciót) az R_i feldolgozási helyéről az R_j feldolgozási helyére.
+- Redukáljuk R_j-t R_j'-re az olyan rekordok törlésével, ahol az A attribútum nem egyezik meg egyetlen R_i[A]-beli értékkel sem.
+
+*Alkalmazása:* 
+Az osztott lekérdezés-feldolgozás adatok begyűjtése a különböző hálózati helyekről.
+
+Fázisai egy semi-join operátorral:
+- Kezdeti helyi feldolgozás: minden kiválasztást, és projekciót helyben elvégzünk.
+- Semi-join feldolgozás: a fennmaradó join műveletekből származtatunk egy semijoin programot és lefuttatjuk, hogy költséghatékony módon csökkentse a relációk méretét.
+- Végső feldolgozás: minden érintett reláció a végső helyre továbbítódik és minden összekapcsolás ott kerül elvégzésre.

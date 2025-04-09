@@ -1,0 +1,125 @@
+Title: 14. Architektúrák: kétrétegű (kliens-szerver), háromrétegű, többrétegű architektúrák, vastag/vékony kliens, előnyök, hátrányok.
+
+*Szoftver architektúrák áttekintése:*
+Az adatbázis-alkalmazások különböző architektúrák szerint épülhetnek fel, melyek eltérnek egymástól a komponensek elhelyezkedése, felelősségi körei és a közöttük lévő kommunikáció módja alapján. Az alapvető cél: a funkcionalitás logikai szétválasztása, a karbantarthatóság és a skálázhatóság javítása.
+
+*Kétrétegű (kliens-szerver) architektúra:*
+A kétrétegű architektúra két fő komponensből áll:
+
+1. **Kliens**: A felhasználói felület és az üzleti logika egy része itt fut.
+2. **Szerver**: Az adatbázis és az adathozzáférési logika itt helyezkedik el.
+
+**Előnyei:**
+- Egyszerű kialakítás
+- Közvetlen kommunikáció a rétegek között
+- Alacsonyabb kezdeti fejlesztési költségek
+- Kisebb hálózati forgalom, ha a feldolgozás nagyobb része a kliensen történik
+
+**Hátrányai:**
+- Skálázhatósági korlátok
+- Nehéz karbantartás, különösen ha az üzleti logika a kliensen van
+- Biztonsági kockázatok (adatbázis közvetlen elérése)
+- Frissítések telepítése minden kliensre szükséges
+
+*Háromrétegű architektúra:*
+A háromrétegű architektúra három jól elkülönített rétegből áll:
+
+1. **Megjelenítési réteg (Presentation layer)**: A felhasználói felület, amely az adatok megjelenítéséért és a felhasználói interakciók kezeléséért felelős.
+2. **Üzleti logikai réteg (Business logic layer)**: Az alkalmazás üzleti szabályainak és folyamatainak kezeléséért felelős.
+3. **Adathozzáférési réteg (Data access layer)**: Az adatbáziskapcsolat és az adatműveletek kezeléséért felelős.
+
+**Előnyei:**
+- Jobb skálázhatóság
+- Nagyobb biztonság (az adatbázis közvetlenül nem érhető el a kliensből)
+- Jobb karbantarthatóság (rétegek függetlenül módosíthatók)
+- Könnyebb tesztelhetőség
+- Erőforrások hatékonyabb elosztása
+
+**Hátrányai:**
+- Komplexebb fejlesztés és telepítés
+- Magasabb kezdeti fejlesztési költségek
+- Nagyobb hálózati forgalom a rétegek közötti kommunikáció miatt
+- Potenciálisan magasabb késleltetés
+
+*Többrétegű (n-tier) architektúra:*
+A többrétegű architektúra kiterjeszti a háromrétegű modellt további, specializált rétegekkel:
+
+1. **Kliens réteg**: Felhasználói felület
+2. **Megjelenítési réteg**: Web vagy alkalmazás szerver
+3. **Üzleti logikai réteg**: Üzleti szabályok és folyamatok
+4. **Integrációs réteg**: Különböző rendszerek integrációja
+5. **Adathozzáférési réteg**: Adatbáziskezelés
+6. **Adatbázis réteg**: Adattárolás
+
+**Előnyei:**
+- Maximális rugalmasság és skálázhatóság
+- Komponensek specializálása és függetlensége
+- Terhelés elosztás a rétegek között
+- Magas rendelkezésre állás
+- Szolgáltatás-orientált architektúra (SOA) támogatása
+
+**Hátrányai:**
+- Jelentős komplexitás
+- Nehezebb hibakeresés
+- Magasabb fejlesztési és üzemeltetési költségek
+- Nagyobb hálózati forgalom
+
+*Vastag és vékony kliens:*
+A kliensek két fő típusa a rajtuk futó logika mennyisége alapján:
+
+**Vastag kliens (Thick/Fat client):**
+- A feldolgozás nagyobb része a kliensen történik
+- Gazdag funkcionalitás, jó felhasználói élmény
+- Komoly hardverigény a kliens oldalon
+- Példák: Asztali alkalmazások (desktop applications)
+
+**Előnyei:**
+- Jobb offline működés
+- Kisebb hálózati forgalom
+- Gazdag felhasználói felület
+- Szerveroldali erőforrás-takarékosság
+
+**Hátrányai:**
+- Nehezebb frissítés/karbantartás
+- Magasabb kliensoldali hardverigény
+- Biztonsági kockázatok
+- Platform-függőség
+
+**Vékony kliens (Thin client):**
+- Minimális feldolgozás a kliensen
+- Elsősorban megjelenítési funkciókat biztosít
+- A logika túlnyomó része a szerveren fut
+- Példák: Webböngészők, terminál kliensek
+
+**Előnyei:**
+- Könnyű frissítés/karbantartás (csak szerver oldalon)
+- Alacsonyabb kliensoldali hardverigény
+- Jobb biztonság (kevesebb kliens oldali kód)
+- Platform-függetlenség
+
+**Hátrányai:**
+- Hálózatfüggőség
+- Magasabb hálózati forgalom
+- Korlátozott offline funkciók
+- Nagyobb szerveroldali erőforrásigény
+
+*Architektúrák összehasonlítása:*
+
+| Jellemző | Kétrétegű | Háromrétegű | Többrétegű |
+|----------|-----------|-------------|------------|
+| Komplexitás | Alacsony | Közepes | Magas |
+| Skálázhatóság | Korlátozott | Jó | Kiváló |
+| Biztonság | Alapszintű | Jó | Kiváló |
+| Karbantarthatóság | Nehéz | Jó | Nagyon jó |
+| Rugalmasság | Alacsony | Közepes | Magas |
+| Fejlesztési költség | Alacsony | Közepes | Magas |
+| Teljesítmény | Változó | Jó | Optimalizálható |
+
+*Modern architektúra trendek:*
+- **Mikroszerviz architektúra**: Kis, független szolgáltatások lazán csatolt rendszere
+- **Szerver nélküli (Serverless) architektúra**: Felhő szolgáltatók által menedzselt infrastruktúra
+- **Konténer-alapú megoldások**: Docker, Kubernetes által biztosított rugalmas környezetek
+- **Edge computing**: Feldolgozás közelebb a felhasználókhoz
+- **Event-driven architektúra**: Eseményalapú kommunikáció a komponensek között
+
+A megfelelő architektúra kiválasztása mindig az adott projekt követelményeitől, méretétől, komplexitásától és a rendelkezésre álló erőforrásoktól függ. Nincs egyetlen "legjobb" megoldás - minden megközelítésnek megvannak a maga előnyei és hátrányai, amelyeket gondosan mérlegelni kell.

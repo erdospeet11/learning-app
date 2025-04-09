@@ -1,0 +1,70 @@
+Title: 6. SQL lekérdezés transzformációja relációs algebrai kifejezésre, optimalizálás lépései.
+
+*SQL lekérdezések transzformációja:*
+Az SQL lekérdezés transzformációja során a következő lépéseket hajtjuk végre:
+1. Az SQL lekérdezés elemzése (parsing)
+2. A parseolt lekérdezésből készített parseolási fa transzformálása logikai lekérdezési tervvé
+3. A logikai lekérdezési terv transzformálása fizikai lekérdezési tervvé
+
+*Parseolási fa:*
+Az SQL lekérdezés syntaxisa alapján készül egy parseolási fa. A parseolási fa csomópontjai két csoportra oszthatók:
+- Atomok (szavak, azonosítók, konstansok) - a lexikális elemek
+- Szintaktikai kategóriák
+
+Az SQL nyelv grammatikája szerint vannak levezetési szabályok. Ezeket az összefüggéseket, az összefüggéseknek megfelelően ábrázoljuk egy fában. Az SQL elemzés (parsing) eredményeképpen előálló parseolási fa a lekérdezés elemzésének az eredménye, ahol a fa gyökere a teljes SQL-lekérdezés, a levélnódusok szintaktikailag elemezhetetlen lexikális elemek (az SQL lekérdezés alap elemei), és a belső pontok szintaktikai kategóriák.
+
+*Parseolási fa transzformálása logikai lekérdezési tervvé:*
+A parseolási fa köztes csomópontjaiban elhelyezkedő szintaktikai kategóriákat relációs algebrai műveletre cserélve kapjuk meg a logikai lekérdezési tervet. A parseolási fa gyökere alatti első szint bal oldali ága a SELECT-rész, jobb oldali ága a FROM-rész, és utána jön a többi záradék, pl. a WHERE-rész.
+- A FROM-részben csupa projekció és természetes összekapcsolás van
+- A WHERE-részben csupa szelekció és Descartes-szorzat van
+
+*Relációs algebrai kifejezések:*
+A relációs algebrai kifejezés kiszámítása során az adatbázis-kezelő rendszernek fontos feladata a kifejezések optimális végrehajtása. 
+
+Példa: Ha a lekérdezés egy olyan WHERE-feltételt tartalmaz, hogy R.A = 5 AND R.B = S.B, akkor hatékonyabb lehet először a kiválasztást (σ R.A = 5) végrehajtani, majd a kisebb reláción elvégezni az összekapcsolást (R.B = S.B), mint fordítva.
+
+*Optimalizálás lépései:*
+1. Az SQL lekérdezést elemezzük, majd parseolási fává alakítjuk.
+2. A parseolási fát átalakítjuk logikai lekérdezési tervvé (relációs algebrai műveletekre épülő terv).
+3. Logikai optimalizálást hajtunk végre (algebrai optimalizálási szabályok alkalmazása).
+4. A logikai lekérdezési tervet átalakítjuk fizikai lekérdezési tervvé, amely már az implementációs részleteket is tartalmazza.
+5. Fizikai optimalizálást hajtunk végre (költségalapú optimalizálás).
+
+*Algebrai optimalizálási szabályok:*
+Az optimalizálásnak számos heurisztikus szabálya van:
+- Kiválasztások sorrendje: a szelekciók sorrendje tetszőleges, de érdemes minél korábban végrehajtani, mert csökkentik a reláció méretét.
+- Projekciók sorrendje: a projekciók sorrendje is tetszőleges, de érdemes minél korábban végrehajtani, mert csökkentik a reláció méretét.
+- Kiválasztások és Descartes-szorzat: érdemes a kiválasztást a Descartes-szorzat elé helyezni, ha a kiválasztás feltétele csak az egyik relációt érinti.
+- Kiválasztások és természetes összekapcsolás: érdemes a kiválasztást a természetes összekapcsolás elé helyezni, ha a kiválasztás feltétele csak az egyik relációt érinti.
+- Projekciók és természetes összekapcsolás: érdemes a projekciót a természetes összekapcsolás elé helyezni, ha az eredményben nem szerepelnek az összekapcsoláshoz használt attribútumok (ha lehetséges).
+
+*Példák az optimalizálásra:*
+1. Szelekciók és Descartes-szorzat
+   - Eredeti: σ R.A=5 AND S.B=3 (R × S)
+   - Optimalizált: σ R.A=5 (R) × σ S.B=3 (S)
+
+2. Szelekciók kombinálása
+   - Eredeti: σ R.A=5 (σ R.B>10 (R))
+   - Optimalizált: σ R.A=5 AND R.B>10 (R)
+
+3. Projekciók kombinálása
+   - Eredeti: π A,B (π A,B,C (R))
+   - Optimalizált: π A,B (R)
+
+4. Projekció és szelekció sorrendje
+   - Eredeti: π A,B (σ R.C=5 (R))
+   - Optimalizált: π A,B (σ R.C=5 (R)) - nem változtatható, mert a szelekcióhoz szükség van C-re
+
+*Költségalapú optimalizálás:*
+A fizikai lekérdezési terv kiválasztásánál a rendszer több alternatív tervet is megvizsgál, és a legkisebb költségűt választja. A költségeket a következők alapján becsüli:
+- Az adatbázis-statisztikák (reláció mérete, oszlopok kardinalitása, stb.)
+- Az elérhető indexek
+- A végrehajtási környezet (memória mérete, processzorteljesítmény, stb.)
+- A műveletek végrehajtási költsége (I/O-műveletek, CPU-idő)
+
+*Optimalizálási stratégiák:*
+1. Greedy stratégia: minden lépésben a lokálisan optimális megoldást választjuk.
+2. Dinamikus programozás: a részproblémák optimális megoldását kombináljuk a teljes probléma optimális megoldásához.
+3. Randomizált algoritmusok: véletlenszerű keresést alkalmazunk az optimális megoldás közelítésére.
+
+Az optimalizálási stratégia kiválasztása függ a lekérdezés bonyolultságától, a reláció méretétől és a rendszer erőforrásaitól. Egyszerű lekérdezések esetén a greedy stratégia is elegendő lehet, míg bonyolultabb esetekben a dinamikus programozás lehet hatékonyabb.

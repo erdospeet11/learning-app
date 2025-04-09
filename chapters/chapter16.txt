@@ -1,0 +1,52 @@
+Title: 16. Zárolási ütemező, kétfázisú zárolás, holtpont, várakozási gráf, fogalmak, állítások.
+
+*Zárolási ütemező:*
+Az ütemező feladata az, hogy megakadályozza az olyan műveleti sorrendeket, amelyek nem sorba rendezhető ütemezésekhez vezetnek. Egyszerű megoldás: zárak használata. Csak egyféle zár van, amelyet a tranzakcióknak meg kell kapniuk az adatbáziselemre, ha bármilyen műveletet akarnak végrehajtani az elemen. 
+
+Az lenne az ideális, ha az ütemező akkor és csak akkor továbbítana egy kérést, ha annak végrehajtása nem vezetne inkonzisztens adatbázis-állapotba. Minden ütemező egy tesztet hajt végre a sorbarendezhetőség biztosítására, azonban letilthat olyan műveleteket is, amelyek önmagukban nem vezetnének inkonzisztenciához. A zárolási ütemező a konfliktus-sorbarendezhetőséget követeli meg. Két új műveletet vezetünk be:
+- l₍i₎(X): a T₍i₎ tranzakció az X adatbáziselemre zárolást kér (lock).
+- u₍i₎(X): a T₍i₎ tranzakció az X adatbáziselem zárolását feloldja (unlock)
+
+*Tranzakciók konzisztenciája:*
+- A tranzakció akkor és csak akkor írhat egy elemet, ha már korábban zárolta az elemet, és még nem oldotta fel a zárat.
+- Ha a tranzakció zárol egy elemet, akkor azt később fel kell szabadítania.
+- Ha egy T₍i₎ tranzakcióban van egy r₍i₎(X) vagy egy w₍i₎(X) művelet, akkor van korábban egy l₍i₎(X) művelet, és van később egy u₍i₎(X) művelet, de a zárolás és az írás/olvasás között nincs u₍i₎(X).
+
+*Az ütemezés jogszerűsége:* 
+Nem zárolhatja két tranzakció ugyanazt az elemet, csak úgy, ha az egyik előbb már feloldotta a zárat. Azaz ha egy ütemezésben van olyan l₍i₎(X) művelet, amelyet l₍j₎(X) követ, akkor e két művelet között lennie kell egy u₍i₎(X) műveletnek.
+
+A zároláson alapuló ütemező feladata, hogy akkor és csak akkor engedélyezze a kérések végrehajtását, ha azok jogszerű ütemezéseket eredményeznek.
+
+Ezt a döntést segíti a **zártábla**, amely minden adatbáziselemhez megadja azt a tranzakciót, ha van ilyen, amelyik pillanatnyilag zárolja az adott elemet.
+
+A zártábla szerkezete (egyféle zárolás esetén): Zárolások(elem, tranzakció) relációt, ahol a T tranzakció zárolja az X adatbáziselemet. Az ütemezőnek csak le kell kérdeznie ezt a relációt illetve egyszerű INSERT és DELETE utasításokkal kell módosítania.
+
+*Kétfázisú zárolás:*
+Van egy feltétel, amellyel biztosítani tudjuk, hogy konzisztens tranzakciók jogszerű ütemezése konfliktus-sorbarendezhető legyen. Ezt a feltételt kétfázisú zárolásnak nevezzük (2FZ), miszerint: minden tranzakcióban minden zárolási művelet megelőzi az összes zárfeloldási műveletet. Az első fázisban csak zárolásokat adunk ki, míg a második fázisban csak feloldjuk a zárokat.
+
+**Tétel**: bármely konzisztens, 2FZ tranzakciók bármely S jogszerű ütemezése átalakítható konfliktus-ekvivalens soros ütemezéssé.
+
+*Holtpont:*
+Probléma: nem lehet 2FZ segítségével a holtpont kialakulását megelőzni. Holtpont: Az ütemező arra kényszeríti a tranzakciót, hogy egy olyan zárra várjon, amelyet egy másik tranzakció tart zárva.
+
+*Holtpontkezelés:* 
+Megoldása során legalább egy tranzakciót vissza kell görgetni, abortálni kell, majd újraindítani. A holtpont érzékelésére és feloldására egyszerű módszer az időtúllépés módszere, megadunk egy időkorlátot, amely arra vonatkozik, hogy egy tranzakció mennyi ideig lehet aktív, és ha ezt a határt túllépi, visszagörgetjük.
+
+*Várakozási gráf:*
+Azok a holtpontok, amelyek azért alakultak ki, mert az egyik tranzakció a másik birtokában levő zárakra vár, jól kezelhetők a várakozási gráfokkal. A gráfban azt tartjuk nyilván, hogy melyik tranzakció melyik tranzakcióra vár. Segítségével észlelhetőek lesznek a már kialakult holtpontok és meg is előzhetőek a kialakulásuk. Az utóbbinál a várakozási gráfot egész idő alatt nyilván kell tartani, és az olyan műveleteket, amelyek következtében a gráfban kör alakul ki, nem szabad megengednünk.
+
+A zártáblában minden X elemhez tartozik egy lista, amelyben azon tranzakciók vannak, amelyek várnak X zárolására illetve már zárolták az X adatbáziselemet. A várakozási gráf csúcsai a listában található tranzakcióknak felelnek meg. A gráfban irányított él fut T-ből U-ba, ha létezik olyan A adatbázis elem, hogy:
+- U zárolja A-t.
+- T arra vár, hogy zárolhassa A-t.
+- T csak akkor kapja meg a számára megfelelő módban A zárját, ha először U lemond róla.
+
+Ha nincs irányított kör a gráfban, akkor végül minden tranzakció be tudja fejezni a működését, mert mindig lesz egy olyan tranzakció, amely nem vár semelyik másikra és továbbléphet.
+
+**Tétel**: Az ütemezés során egy adott pillanatban pontosan akkor nincs holtpont, ha az adott pillanathoz tartozó várakozási gráfban nincs irányított kör.
+
+*Megoldások holtpont ellen:*
+- Rajzoljuk folyamatosan a várakozási gráfot, és ha holtpont alakul ki, akkor ABORT-áljuk az egyik olyan tranzakciót, aki benne van a kialakult irányított körben.
+- Pesszimista hozzáállás: ha hagyjuk, hogy mindenki össze-vissza kérjen zárat, abból baj lehet. Előzzük inkább meg a holtpont kialakulását valahogyan. Lehetőségek:
+  - Minden egyes tranzakció előre elkéri az összes zárat, ami neki kelleni fog. Ha nem kapja meg az összeset, akkor egyet se kér el, el se indul. Ilyenkor biztos nem lesz holtpont, mert ha valaki megkap egy zárat, akkor le is tud futni, nem akad el. Az csak a baj ezzel, hogy előre kell mindent tudni.
+  - Feltesszük, hogy van egy sorrend az adategységeken és minden egyes tranzakció csak e szerint a sorrend szerint növekvően kérhet újabb zárakat. Itt lehet, hogy lesz várakozás, de holtpont biztos nem lesz.
+  - Időkorlát segítségével.

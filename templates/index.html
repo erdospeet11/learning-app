@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .commands {
+            margin-top: 20px;
+        }
+
+        .commands h2 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: #ecf0f1;
+        }
+
+        .command-list {
+            list-style: none;
+        }
+
+        .command-list li {
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #bdc3c7;
+        }
+
+        .command-code {
+            font-family: monospace;
+            color: #e74c3c;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f5f5f5;
+            height: 100vh;
+        }
+
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .tab-button {
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            color: #bdc3c7;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            color: white;
+            border-bottom: 2px solid #e74c3c;
+        }
+
+        .tab-button:hover {
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        .view-toggle {
+            display: flex;
+            padding: 10px 20px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .view-toggle button {
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: #666;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .view-toggle button.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+
+        .content-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #chat-messages {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f5f5f5;
+            display: none;
+        }
+
+        #chat-messages.active {
+            display: block;
+        }
+
+        #chapter-viewer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            padding: 30px;
+            background: white;
+            display: none;
+            line-height: 1.6;
+        }
+
+        #chapter-viewer.active {
+            display: block;
+        }
+
+        #pdf-viewer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            background: #f5f5f5;
+            padding: 0;
+        }
+
+        #pdf-viewer.active {
+            display: block;
+        }
+
+        #pdf-embed {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        #chapter-viewer .chapter-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        #chapter-viewer h1 {
+            font-size: 28px;
+            margin-bottom: 35px;
+            color: #2c3e50;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 15px;
+            text-align: center;
+        }
+
+        #chapter-viewer h2 {
+            font-size: 22px;
+            margin: 40px 0 20px 0;
+            color: #2c3e50;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            background-color: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 0 4px 4px 0;
+        }
+
+        #chapter-viewer h2.emphasized {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            font-weight: bold;
+        }
+
+        #chapter-viewer h3 {
+            font-size: 18px;
+            margin: 30px 0 15px 0;
+            color: #2c3e50;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        #chapter-viewer p {
+            margin-bottom: 16px;
+            color: #2c3e50;
+            font-size: 16px;
+            line-height: 1.8;
+            text-align: justify;
+        }
+
+        #chapter-viewer ul {
+            margin: 15px 0 25px 0;
+            padding-left: 25px;
+        }
+
+        #chapter-viewer li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        #chapter-viewer p:last-child, 
+        #chapter-viewer li:last-child {
+            margin-bottom: 0;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .message.user {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.system {
+            background: #e9ecef;
+            color: #666;
+            margin: 10px auto;
+            text-align: center;
+            max-width: 70%;
+        }
+
+        .message.assistant {
+            background: white;
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+
+        .input-area {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        #user-input:focus {
+            border-color: #007bff;
+        }
+
+        .send-button {
+            padding: 12px 24px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .send-button:hover {
+            background: #0056b3;
+        }
+
+        /* Add scrollbars for chapter list */
+        #chapter-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+            max-height: calc(100vh - 250px);
+        }
+
+        #chapter-list .chapter-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #2c3e50;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            color: #ecf0f1;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        #chapter-list .chapter-item:hover {
+            background-color: #34495e;
+        }
+
+        #chapter-list .chapter-item.active {
+            background-color: #3498db;
+        }
+
+        #chapter-list .chapter-number {
+            font-weight: bold;
+            margin-right: 10px;
+            min-width: 50px;
+        }
+
+        #chapter-list .chapter-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        /* Scrollbar customization */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Add drag and drop styles */
+        #chat-messages.drag-over {
+            background: #e3f2fd;
+            border: 2px dashed #2196f3;
+        }
+
+        #chat-messages.drag-over::after {
+            content: 'Drop PDF here';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #2196f3;
+            pointer-events: none;
+        }
+
+        /* Flashcards CSS */
+        .flashcards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 300px));
+            gap: 20px;
+            justify-content: center;
+            padding: 20px 10px;
+            width: 100%;
+        }
+        
+        .flashcard {
+            width: 100%;
+            height: 180px;
+            perspective: 1000px;
+            margin: 0;
+        }
+        
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        
+        .flashcard:hover .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+        
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .card-content h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .card-content p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #4a4a4a;
+        }
+        
+        .flashcard-back {
+            transform: rotateY(180deg);
+            background: #f8f9fa;
+        }
+        
+        .flip-instruction {
+            position: absolute;
+            bottom: 5px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 11px;
+            color: #888;
+            font-style: italic;
+            padding: 5px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 0 0 12px 12px;
+        }
+
+        /* Custom scrollbar */
+        .card-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .card-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 2px;
+        }
+        
+        .card-content::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 2px;
+        }
+        
+        .card-content::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        /* Enhanced Markdown formatting */
+        .message strong {
+            font-weight: bold;
+        }
+
+        .message em {
+            font-style: italic;
+        }
+
+        .message p {
+            margin-bottom: 8px;
+        }
+
+        .message p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message h1, .message h2, .message h3, .message h4, .message h5, .message h6 {
+            margin: 16px 0 8px;
+            color: #2c3e50;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .message h1 { font-size: 1.5em; }
+        .message h2 { font-size: 1.3em; }
+        .message h3 { font-size: 1.1em; }
+        .message h4 { font-size: 1em; }
+        .message h5 { font-size: 0.9em; }
+        .message h6 { font-size: 0.8em; }
+
+        .message.user h1, .message.user h2, .message.user h3, 
+        .message.user h4, .message.user h5, .message.user h6,
+        .message.user strong, .message.user em {
+            color: white;
+        }
+
+        .message .formatted-list {
+            margin: 8px 0;
+            padding-left: 24px;
+        }
+
+        .message .formatted-list li {
+            margin-bottom: 8px;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        .message .formatted-list li:last-child {
+            margin-bottom: 0;
+        }
+
+        .message.assistant .formatted-list {
+            color: #2c3e50;
+        }
+
+        .message.user .formatted-list {
+            color: white;
+        }
+
+        /* Preserve whitespace in code blocks */
+        .message pre {
+            white-space: pre-wrap;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 8px 0;
+            font-family: monospace;
+        }
+
+        .message.assistant pre {
+            background: #f8f9fa;
+        }
+
+        .message.user pre {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+            
+            .flashcards-container {
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 15px;
+                padding: 15px 5px;
+            }
+        }
+
+        /* Additional styles for PDF viewer controls */
+        .pdf-controls {
+            padding: 10px;
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .pdf-controls button {
+            padding: 6px 12px;
+            margin-right: 10px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .pdf-controls button:hover {
+            background: #e9ecef;
+        }
+
+        .pdf-controls .pdf-page-info {
+            margin-left: auto;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .pdf-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: 20px;
+        }
+        
+        .pdf-selector select {
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+
+        /* Styles for PDF viewer */
+        .pdf-error {
+            padding: 20px;
+            background: #fff3f3;
+            border-left: 4px solid #e53935;
+            color: #c62828;
+            margin: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Upload container styles */
+        .upload-container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .upload-container h2 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .upload-container p {
+            margin-bottom: 30px;
+            color: #7f8c8d;
+        }
+
+        #upload-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #pdf-upload {
+            margin-bottom: 20px;
+        }
+
+        #upload-form button {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        #upload-form button:hover {
+            background: #2980b9;
+        }
+
+        .upload-container.highlight {
+            border: 2px dashed #3498db;
+            background: #f1f9ff;
+        }
+
+        #upload-status {
+            margin-top: 20px;
+        }
+
+        #upload-status .success {
+            padding: 10px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #4caf50;
+            text-align: left;
+            border-radius: 4px;
+        }
+
+        #upload-status .error {
+            padding: 10px;
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #f44336;
+            text-align: left;
+            border-radius: 4px;
+        }
+
+        .input-area {
+            display: flex;
+            padding: 10px 20px;
+            background: white;
+            border-top: 1px solid #ddd;
+        }
+
+        .input-area textarea {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: none;
+            height: 60px;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        .input-area textarea:focus {
+            border-color: #3498db;
+        }
+
+        .input-area button {
+            margin-left: 10px;
+            padding: 0 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .input-area button:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h1>Learning Assistant</h1>
+        
+        <div class="chapters">
+            <h2>Chapters</h2>
+            <ul id="chapter-list" class="command-list">
+                <!-- Chapter list will be populated by JavaScript -->
+            </ul>
+        </div>
+        
+        <div class="commands">
+            <h2>Commands</h2>
+            <ul class="command-list">
+                <li><span class="command-code">/help</span> - Show available commands</li>
+                <li><span class="command-code">/list</span> - List all chapters</li>
+                <li><span class="command-code">/load [number]</span> - Load chapter</li>
+                <li><span class="command-code">/cards</span> - Generate flashcards</li>
+                <li><span class="command-code">/summary</span> - Chapter summary</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="switchTab('learn')">Learn</button>
+            <button class="tab-button" onclick="switchTab('upload')">Upload</button>
+            <button class="tab-button" onclick="switchTab('pdf')">PDF View</button>
+        </div>
+        
+        <div id="learn-tab" class="tab-content active">
+            <div class="view-toggle">
+                <button class="active" onclick="switchView('chat')">Chat</button>
+                <button onclick="switchView('chapter')">Chapter</button>
+            </div>
+            
+            <div class="content-container">
+                <div id="chat-messages" class="active">
+                    <div class="message system">
+                        <p>Welcome to the Learning Assistant! Upload a PDF or use existing chapters to start.</p>
+                        <p>Type <span style="font-family: monospace; background: #eee; padding: 2px 4px; border-radius: 3px;">/help</span> to see available commands.</p>
+                    </div>
+                </div>
+                
+                <div id="chapter-viewer">
+                    <!-- Chapter content will be loaded here -->
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <textarea id="user-input" placeholder="Type a message or command..." onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"></textarea>
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+        
+        <div id="upload-tab" class="tab-content">
+            <div class="upload-container">
+                <h2>Upload PDF</h2>
+                <p>Drag and drop a PDF file here or click to select</p>
+                <form id="upload-form">
+                    <input type="file" id="pdf-upload" accept=".pdf" />
+                    <button type="submit">Upload</button>
+                </form>
+                <div id="upload-status"></div>
+            </div>
+        </div>
+        
+        <div id="pdf-tab" class="tab-content">
+            <div class="pdf-controls">
+                <div class="pdf-selector">
+                    <select id="pdf-source-select">
+                        <option value="uploaded">Uploaded PDF</option>
+                        <option value="chapters">Chapter PDF</option>
+                    </select>
+                    <button id="load-pdf-btn">Load PDF</button>
+                </div>
+                <button id="prev-page">Previous Page</button>
+                <button id="next-page">Next Page</button>
+                <span class="pdf-page-info">Page: <span id="page-num"></span> / <span id="page-count"></span></span>
+            </div>
+            <div id="pdf-viewer">
+                <iframe id="pdf-embed" src="about:blank"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+</body>
+</html> 

@@ -1,0 +1,46 @@
+Title: 15. Konkurenciavezérlés, ütemezés, sorbarendezhetőség, konfliktus-sorbarendezhetőség, megelőzési gráf, fogalmak, állítások.
+
+*Konkurenciavezérlés alapfogalmai:*
+A tranzakciók közötti egymásra hatás az adatbázis-állapot inkonzisztenssé válását okozhatja, még akkor is, amikor a tranzakciók külön-külön megőrzik a konzisztenciát, és rendszerhiba sem történt. Azt az általános folyamatot, amely biztosítja, hogy a tranzakciók egyidejű végrehajtása során megőrizzék a konzisztenciát, konkurenciavezérlésnek nevezzük.
+
+*Ütemezés:*
+Olyan ütemezéseket kell tekintenünk, amelyek biztosítják, hogy ugyanazt az eredményt állítják elő, mintha a tranzakciókat egyesével hajtottuk volna végre. Az ütemezés egy vagy több tranzakció által végrehajtott lényeges műveletek időben vett sorozata. Ütemezések során csak a READ és WRITE műveletekkel foglalkozunk.
+
+Egy ütemezés soros, ha bármely két T és T' tranzakcióra, ha T-nek van olyan művelete, amely megelőzi a T' valamelyik műveletét, akkor a T összes művelete megelőzi T' valamennyi műveletét.
+
+Általában nem várjuk el, hogy az adatbázis végső állapota független legyen a tranzakciók sorrendjétől. A soros ütemezést a tranzakciók felsorolásával adjuk meg. Pl. (T₁, T₂).
+
+*Sorbarendezhetőség:*
+Egy ütemezés sorba rendezhető, ha ugyanolyan hatással van az adatbázis állapotára, mint valamelyik soros ütemezés, függetlenül az adatbázis kezdeti állapotától.
+
+Jelölések:
+- Egy tranzakció műveletét r₍i₎(X) vagy w₍i₎(X) formában fejezünk ki, amely azt jelenti, hogy a T₍i₎ tranzakció olvassa ill. írja az X adatbáziselemet.
+- Egy T₍i₎ tranzakció az i indexű műveletekből álló sorozat.
+- A T tranzakciók halmazának egy S ütemezése olyan műveletek sorozata, amelyben minden T halmazbeli T₍i₎ tranzakcióra teljesül, hogy T₍i₎ műveletei ugyanabban a sorrendben fordulnak elő S-ben, mint ahogy magában a T₍i₎ definíciójában szerepeltek. Azt mondjuk, hogy az S az őt alkotó tranzakciók műveleteinek átlapolása.
+
+*Konfliktus-sorbarendezhetőség:*
+Konfliktus akkor van, ha van olyan egymást követő műveletpár az ütemezésben, amelynek ha a sorrendjét felcseréljük, akkor legalább az egyik tranzakció viselkedése megváltozik. Tegyük fel, hogy T₍i₎ és T₍j₎ különböző tranzakciók. Ekkor nincs konfliktus, ha a pár:
+- r₍i₎(X) és r₍j₎(Y), még akkor sem, ha X = Y.
+- r₍i₎(X) és w₍j₎(Y), és ha X ≠ Y.
+- w₍i₎(X) és r₍j₎(Y), és ha X ≠ Y.
+- w₍i₎(X) és w₍j₎(Y), és ha X ≠ Y.
+
+Három esetben nem cserélhetjük fel a műveletek sorrendjét:
+- r₍i₎(X) és w₍i₎(Y) konfliktusos pár, mivel egyetlen tranzakción belül a műveletek sorrendje rögzített, és az adatbázis-kezelő ezt a sorrendet nem rendezheti át.
+- w₍i₎(X) és w₍j₎(X) konfliktusos pár, mivel X értéke az marad, amit T₍j₎ számolt ki. Ha felcseréljük a sorrendjüket, akkor pedig X-nek a T₍i₎ által kiszámolt értéke marad meg. A pesszimista feltevés miatt a T₍i₎ és a T₍j₎ által kiírt értékek lehetnek különbözőek, és ezért az adatbázis valamelyik kezdeti állapotára különbözni fognak.
+- r₍i₎(X) és w₍j₎(X) továbbá w₍i₎(X) és r₍j₎(X) is konfliktusos pár. Ha átvisszük w₍j₎(X)-et r₍i₎(X) elé, akkor a T₍i₎ által olvasott X-beli érték az lesz, amit a T₍j₎ kiírt, amiről pedig feltételeztük, hogy nem szükségképpen egyezik meg X korábbi értékével. Tehát r₍i₎(X) és w₍j₎(X) sorrendjének cseréje befolyásolja, hogy T₍i₎ milyen értéket olvas X-ből, ez pedig befolyásolja T₍i₎ működését.
+
+Azt mondjuk, hogy két ütemezés konfliktus-ekvivalens, ha szomszédos műveleteinek konfliktus mentes cseréinek sorozatával az egyiket átalakíthatjuk a másikká. Azt mondjuk, hogy egy ütemezés konfliktus-sorbarendezhető, ha konfliktus-ekvivalens valamely soros ütemezéssel. A konfliktus-sorbarendezhetőség elégséges feltétele a sorbarendezhetőségnek.
+
+*Megelőzési gráf:*
+Adott T₁ és T₂ tranzakciónak egy S ütemezése. Azt mondjuk, hogy T₁ megelőzi T₂-t, (jele: T₁ <ₛ T₂), ha van a T₁-ben olyan A₁ művelet és a T₂-ben olyan A₂ művelet, hogy:
+- A₁ megelőzi A₂-t az S-ben,
+- A₁ és A₂ ugyanarra az adatbáziselemre vonatkoznak és,
+- A₁ és A₂ közül legalább az egyik írási művelet.
+
+Egy körmentes gráf csúcsainak topologikus sorrendje a csúcsok bármely olyan rendezése, amelyben minden a → b élre az a csúcs megelőzi a b csúcsot a topologikus rendezésben.
+
+**Lemma**: S₁, S₂ konfliktusekvivalens → gráf(S₁)=gráf(S₂)
+**Megjegyzés**: gráf(S₁)=gráf(S₂)-ból nem következik, hogy S₁, S₂ konfliktusekvivalens.
+
+**Állítás**: ha létezik T₁ → T₂ → … → Tₙ → T₁ n darab tranzakcióból álló kör, akkor a feltételezett soros sorrendben T₁ műveleteinek meg kell előzniük a T₂-ben szereplő műveleteket, amelyeknek meg kell előzniük a T₃-belieket és így tovább egészen Tₙ-ig. De Tₙ műveletei emiatt a T₁-beliek mögött vannak, ugyanakkor meg is kellene előzniük a T₁-belieket a Tₙ → T₁ él miatt. Ebből következik, hogy ha a megelőzési gráf tartalmaz kört, akkor az ütemezés nem konfliktus-sorbarendezhető.

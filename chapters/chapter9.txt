@@ -1,0 +1,97 @@
+Title: 9. Relációs séma dekompozíciója, hőtérkép (heatmap), Tranzakció, ACID tulajdonságok, Ütemezhetőség, szeriális-, konfliktus szeriális-, megengedő ütemezés
+
+*Relációs séma dekompozíciója*
+A relációs adatbázisok tervezése során fontos, hogy a relációs sémákat optimális formára hozzuk. A normalizálás során a redundanciát minimalizáljuk és az adatok integritását maximalizáljuk a relációk felbontásával (dekompozíció).
+
+A dekompozíció során egy R relációs sémát kisebb részekre (R₁, R₂, ..., Rₙ) bontunk úgy, hogy:
+- Az eredeti relációban tárolt összes adat tárolható legyen az új relációkban (veszteségmentes dekompozíció)
+- A funkcionális függőségek megmaradjanak
+- A redundancia csökkenjen
+
+Dekompozíciós módszerek:
+- Boyce-Codd normálforma (BCNF) dekompozíció
+- Harmadik normálforma (3NF) dekompozíció
+- Többértékű függőségek kezelése (4NF)
+
+*Hőtérkép (heatmap)*
+A hőtérkép egy olyan vizualizációs technika, amely adatokat színekkel jelenít meg egy mátrix formában. Adatbázisok kontextusában használható:
+- Lekérdezési minták elemzésére
+- Adathozzáférési gyakoriság vizualizálására
+- Adatok közötti korrelációk kimutatására
+- Anomáliák és teljesítményproblémák felderítésére
+
+A hőtérkép színei általában a következőket jelenthetik:
+- Sötétebb színek: gyakori hozzáférés, erős korreláció
+- Világosabb színek: ritka hozzáférés, gyenge korreláció
+
+Hőtérképek segítségével az adatbázis-tervezők azonosíthatják az optimalizálandó területeket és a potenciális problémákat a rendszerben.
+
+*Tranzakció*
+A tranzakció az adatbázisban végrehajtott műveletek logikailag oszthatatlan (atomi) sorozata. Egy tranzakció vagy teljesen végrehajtódik, vagy egyáltalán nem (mintha soha nem kezdődött volna el).
+
+Egy tranzakció tipikus végrehajtási lépései:
+1. BEGIN TRANSACTION: tranzakció kezdete
+2. Adatbázis-műveletek (SELECT, INSERT, UPDATE, DELETE)
+3. COMMIT: tranzakció sikeres befejezése vagy ROLLBACK: tranzakció visszagörgetése
+
+*ACID tulajdonságok*
+Az ACID rövidítés a tranzakciók négy alapvető tulajdonságát jelöli:
+
+1. Atomicitás (Atomicity):
+   - Egy tranzakció oszthatatlan egység
+   - Vagy minden művelete végrehajtódik, vagy egy sem
+   - Részleges végrehajtás nem lehetséges
+
+2. Konzisztencia (Consistency):
+   - A tranzakció az adatbázist egyik konzisztens állapotból egy másik konzisztens állapotba viszi
+   - Az adatbázis integritási szabályai nem sérülhetnek
+   - A tranzakció előtt és után az adatbázis megfelel minden definiált szabálynak
+
+3. Izoláció (Isolation):
+   - A párhuzamosan futó tranzakciók egymástól függetlenül hajtódnak végre
+   - Egy tranzakció közbenső eredményei nem láthatók más tranzakciók számára
+   - Az izoláció mértéke beállítható különböző izolációs szintekkel
+
+4. Tartósság (Durability):
+   - A sikeres (kommitált) tranzakciók eredménye tartósan megmarad
+   - A rendszer összeomlása után is visszaállíthatók az adatok
+   - Általában naplózással (logging) biztosítják
+
+*Ütemezhetőség*
+Az ütemezhetőség az adatbázis-kezelő rendszer azon képessége, hogy több tranzakciót párhuzamosan és hatékonyan hajtson végre anélkül, hogy az adatok konzisztenciája sérülne.
+
+*Szeriális ütemezés*
+A szeriális ütemezés során a tranzakciók egymás után, átfedés nélkül hajtódnak végre.
+- Előnye: garantáltan helyes eredményt ad, mivel nincs interferencia a tranzakciók között
+- Hátránya: alacsony párhuzamosság, rossz erőforrás-kihasználtság
+
+Példa szeriális ütemezésre:
+T₁ teljes végrehajtása, majd T₂ teljes végrehajtása.
+
+*Konfliktus szeriális ütemezés*
+Két művelet konfliktusban van, ha:
+- Különböző tranzakciókhoz tartoznak
+- Ugyanarra az adatelemre vonatkoznak
+- Legalább az egyik művelete írás (write)
+
+Egy ütemezés konfliktus-szeriális, ha konfliktusműveleti sorrendje megegyezik valamilyen szeriális ütemezéssel.
+- Konfliktus-ekvivalens: két ütemezés konfliktus-ekvivalens, ha ugyanazok a műveleteik és a konfliktusban lévő műveleteik sorrendje megegyezik
+- Konfliktus-szerializálható: egy ütemezés konfliktus-szerializálható, ha konfliktus-ekvivalens egy szeriális ütemezéssel
+
+A konfliktus-szerializálhatóság tesztelésére gyakran használt eszköz a konfliktus gráf (precedencia gráf).
+
+*Megengedő ütemezés*
+A megengedő ütemezés (permissive scheduling) olyan ütemezési technika, amely maximalizálja a párhuzamosságot, miközben garantálja a konzisztenciát.
+
+Jellemzői:
+- Kevesebb zárolás használata
+- Magasabb párhuzamosság
+- Potenciálisan jobb teljesítmény
+
+Különböző izolációs szintek:
+1. READ UNCOMMITTED: legalacsonyabb izolációs szint, piszkos olvasás lehetséges
+2. READ COMMITTED: megakadályozza a piszkos olvasást
+3. REPEATABLE READ: biztosítja, hogy a többször olvasott adatok változatlanok maradjanak
+4. SERIALIZABLE: legmagasabb izolációs szint, teljes izolációt biztosít
+
+Az optimista konkurenciakezelés (optimistic concurrency control) is egy megengedő ütemezési megközelítés, amely feltételezi, hogy a konfliktusok ritkán fordulnak elő, és inkább utólag ellenőrzi a konfliktusokat, minthogy előzetes zárolást alkalmazna.

@@ -1,0 +1,84 @@
+Title: 7. A relációs algebrai műveletek megvalósítása, egy és többmenetes algoritmusok, műveleti költségek, outputméretek becslése.
+
+*Megvalósítások és költségek:* 
+A relációs algebrai műveletek a kiválasztás (σ), a vetítés (π), az unió (U), a különbség (-), a szorzat (x), és az összekapcsolás (⋈).
+
+A műveletekhez kapcsolódó költségparaméterek a következők:
+- NR: R rekordjainak száma.
+- LR: R egy rekordjának mérete.
+- FR: blokkolási tényező (egy lapon levő rekordok száma).
+- BR: az R reláció tárolásához szükséges lapok száma.
+- V(A,R): az A mező különböző értékeinek száma R-ben (Képméret).
+- SC(A,R): az A mező kiválasztási számossága R-ben (Szelektivitás).
+- A kulcs: S(A,R)=1.
+- A nem kulcs: S(A,R)= NR / V(A,R).
+- HTi: az i index szintjeinek száma.
+
+A törteket és logaritmusokat felfelé kerekítjük.
+
+*Kiválasztás (σ) megvalósítása:*
+- **Lineáris keresés**: olvassunk be minden lapot és keressük az egyezéseket (egyenlőség vizsgálata esetén). Átlagos költség: nem kulcs BR, kulcs 0.5*BR.
+- **Logaritmikus keresés**: rendezett mező esetén |log2 BR| + m. Az átlagos költség: m további oldalt kell beolvasni, és m = ⌈SC(A,R)/FR⌉ - 1.
+- **Elsődleges/cluster index**: átlagos költség egyetlen rekord esetén HTi + 1, több rekord esetén HTi + ⌈SC(A,R)/FR⌉.
+- **Másodlagos index**: az átlagos költség kulcs mezőnél HTi + 1, nem kulcs mezőnél legrosszabb eset HTi + SC(A,R), de a lineáris keresés kedvezőbb, ha sok a megfelelő rekord.
+
+*Összetett kiválasztás (σ) megvalósítása:*
+Konjunkciós kiválasztás: σθ1∧θ2...∧θn
+- Végezzünk egyszerű kiválasztást a legkisebb költségű θi-re pl. a θi-hez tartozó index felhasználásával, a fennmaradó θ feltételek szerint szűrjük az eredményt. Költség: az egyszerű kiválasztás költsége a kiválasztott θ-ra.
+- Több index esetén válasszuk ki a θi-khez tartozó indexeket, és keressünk az indexekben és adjuk vissza a RID-ket. Válasz: RID-k metszete. Költség: a költségek összege + rekordok beolvasása.
+
+Diszjunkciós kiválasztás: σθ1∨θ2...∨θn
+- Több index esetén a RID-k uniója.
+- Lineáris keresés.
+
+*Vetítés (π) és halmazműveletek megvalósítása:*
+A halmazműveletekhez ki kell szűrni a duplikált értékeket:
+- R ∩ S (metszet)
+- R U S (unió)
+
+**Rendezés**: sok művelet hatékony kiértékelése. A lekérdezés igényelheti. Megvalósítása lehet belső rendezés (ha a rekordok beférnek a memóriába), vagy külső rendezés.
+
+*Vetítés (π) megvalósítása:*
+πA1,A2…(R)
+- **Felesleges mezők törlése**: átnézés és mezők eldobása.
+- **Duplikált rekordok törlése**: az eredmény rekordok rendezése az összes mező szerint. A rendezett eredmény átnézése, duplikáltak (szomszédos) törlése.
+- Költség: kezdeti átnézés + rendezés + végső átnézés.
+
+*Összekapcsolás (⋈) megvalósítása:*
+- **Skatulyázott ciklusos (nested loop) összekapcsolás**:
+  - Bármilyen összekapcsolási feltételnél működik.
+  - S belső reláció, és R külső reláció.
+  - Költség: legjobb eset, ha a kisebb reláció elfér a memóriában, ezt használjuk belső relációnak, ekkor: BR + BS. Legrosszabb eset, ha mindkét relációból csak 1-1 lap fér bele a memóriába, ekkor S-t minden R-beli rekordnál végig kell olvasni, így NR * BS + BR.
+
+- **Blokk-skatulyázott ciklusos (block-nested loop) összekapcsolás**:
+  - Költség: legjobb eset, ha a kisebb reláció elfér a memóriában, ezt használjuk belső relációnak, ekkor: BR + BS. Legrosszabb eset, ha mindkét relációból csak 1-1 lap fér bele a memóriába, ekkor S-t minden R-beli lapnál végig kell olvasni, így BR * BS + BR.
+
+- **Indexelt skatulyázott ciklusos összekapcsolás**:
+  - R ⋈ S
+  - Index a belső reláción (S).
+  - A külső reláció (R) minden rekordjánál keresünk a belső reláció indexében.
+  - Költség: BR + NR * c, ahol c a belső relációból index szerinti kiválasztás költsége. A kevesebb rekordot tartalmazó reláció legyen a külső.
+
+- **Összefésüléses rendező összekapcsolás**:
+  - R ⋈ S
+  - A relációk rendezettek az összekapcsolási mezők szerint.
+  - Egyesítjük a rendezett relációkat: mutatók az első rekordra mindkét relációban. Beolvasunk S-ből egy rekordcsoportot, ahol az összekapcsolási attribútum értéke megegyezik. Beolvasunk rekordokat R-ből és feldolgozzuk.
+  - A rendezett relációkat csak egyszer kell végigolvasni.
+  - Költség: rendezés költsége + BS + BR.
+
+- **Hasításos összekapcsolás**:
+  - R ⋈ S
+  - Alkalmazzuk h1-et az összekapcsolási mezőre és felosztjuk a rekordokat a memóriában elférő részekre. R rekordjainak felosztása R0… Rn-1. S rekordjainak felosztása S0… Sn-1.
+  - Az egymáshoz illő partíciók rekordjait összekapcsoljuk, hasítófüggvény alapján indexelt blokk-skatulyázott ciklusos összekapcsolással.
+  - Költség: 2*(BR + BS) + (BR + BS).
+
+*Költségbecslés:*
+Fontos a művelet, a megvalósítás, a bemenet mérete, a kimenet mérete, és a rendezés. A költségoptimalizáló átalakítja a kifejezéseket egyenértékű kifejezésekké szabályok segítségével. Korán kell elvégezni a kiválasztást, és a vetítést. A szorzatot követő kiválasztást helyettesítsük összekapcsolással. A legkisebb eredményt adó összekapcsolásokkal és kiválasztásokkal kezdjük, és készítsünk bal oldalon mély kiválasztási fákat.
+
+*Méretbecslés:*
+- σA=v(R) esetén SC(A,R).
+- σA<=v(R) esetén NR * (v-min(A,R)) / (max(A,R)-min(A,R))
+- σθ1∧θ2∧...∧θn(R) esetén szorzódnak a valószínűségek, így NR * [(s1/NR)*(s2/NR)*...*(sn/NR)]
+- σθ1∨θ2∨...∨θn(R) esetén annak valószínűsége, hogy egy rekordra egy θ se igaz: [(1-s1/NR)*(1-s2/NR)*...*(1-sn/NR)], így NR * (1-[(1-s1/NR)*(1-s2/NR)*...*(1-sn/NR)]).
+- R x S esetén NR * NS.
+- R ⋈ S esetén, ha R ∩ S = ø: NR * NS. Ha R ∩ S kulcs R-en: a kimenet maximális mérete NS. Ha R ∩ S idegen kulcs R-hez: NS. Ha R ∩ S = {A}, sem R-nek, sem S-nek nem kulcsa: NR * NS / V(A,S), NS * NR / V(A,R).

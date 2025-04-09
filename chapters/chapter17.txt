@@ -1,0 +1,178 @@
+Title: 17. A relációs adatmodell alapfogalmai: értékek, attribútumok, rekordok és relációk. Relációséma, adatbázisséma, séma katalógus. Az SQL adatdefiníciós nyelve.
+
+*A relációs adatmodell alapfogalmai:*
+A relációs adatmodell a matematikai halmazelmélet és relációs algebra alapjaira épül. Ez a modell az adatokat táblázatokban szervezi, amelyeket relációknak nevezünk.
+
+**Alapfogalmak:**
+- **Értékek**: Az adatbázisban tárolt alapvető adategységek. Például: "John", 25, "2023-05-15".
+- **Attribútumok (mezők)**: Az adatok tulajdonságai, amelyek egy-egy oszlopot alkotnak a relációs táblában. Minden attribútumnak neve és típusa van. Például: név, kor, születési dátum.
+- **Rekord (sor, tuple)**: Egy entitás vagy esemény összetartozó attribútumértékeinek készlete. A reláció egy sora.
+- **Reláció (tábla)**: Rekordok halmaza. Egy táblázat, amelynek oszlopai az attribútumok és sorai a rekordok.
+
+*Relációséma:*
+A relációséma a reláció szerkezetének leírása. Tartalmazza a reláció nevét és az attribútumok nevét és típusát. Formálisan: R(A₁:T₁, A₂:T₂, ..., Aₙ:Tₙ), ahol R a reláció neve, A₁, A₂, ..., Aₙ az attribútumok nevei és T₁, T₂, ..., Tₙ a hozzájuk tartozó típusok.
+
+Például: DOLGOZÓ(id:INTEGER, név:VARCHAR(50), fizetés:DECIMAL(10,2))
+
+*Adatbázisséma:*
+Az adatbázisséma az egész adatbázis szerkezetének leírása. Tartalmazza az összes relációsémát, valamint a relációk közötti megszorításokat, kapcsolatokat, integritási szabályokat. Az adatbázisséma az adatbázis metaadata, vagyis "adat az adatról".
+
+*Séma katalógus:*
+A séma katalógus (vagy rendszerkatalógus) az adatbázis-kezelő rendszer által fenntartott, rendszerszintű táblák összessége, amelyek az adatbázis objektumairól tárolnak információkat. Ezek a táblák tartalmazzák az adatbázis metaadatait, mint például:
+- Táblák nevei és tulajdonságai
+- Attribútumok nevei, típusai, megszorításai
+- Indexek
+- Felhasználók és jogosultságok
+- Nézetek definíciói
+
+*Az SQL adatdefiníciós nyelve (DDL - Data Definition Language):*
+Az SQL DDL parancsok lehetővé teszik adatbázis-objektumok (táblák, indexek, nézetek stb.) létrehozását, módosítását és törlését.
+
+**CREATE - Objektumok létrehozása:**
+
+1. **Adatbázis létrehozása:**
+```sql
+CREATE DATABASE adatbazis_nev;
+```
+
+2. **Tábla létrehozása:**
+```sql
+CREATE TABLE tabla_nev (
+  oszlop1 tipus1 [megszoritasok],
+  oszlop2 tipus2 [megszoritasok],
+  ...
+  [tabla_szintu_megszoritasok]
+);
+```
+
+Példa:
+```sql
+CREATE TABLE Dolgozok (
+  id INT PRIMARY KEY,
+  nev VARCHAR(50) NOT NULL,
+  szuletesi_datum DATE,
+  fizetes DECIMAL(10,2) DEFAULT 0,
+  reszleg_id INT,
+  FOREIGN KEY (reszleg_id) REFERENCES Reszlegek(id)
+);
+```
+
+3. **Index létrehozása:**
+```sql
+CREATE INDEX index_nev ON tabla_nev (oszlop1, oszlop2, ...);
+```
+
+4. **Nézet létrehozása:**
+```sql
+CREATE VIEW nezet_nev AS
+SELECT ...
+FROM ...
+WHERE ...;
+```
+
+**ALTER - Objektumok módosítása:**
+
+1. **Tábla módosítása:**
+```sql
+-- Oszlop hozzáadása
+ALTER TABLE tabla_nev ADD oszlop tipus [megszoritasok];
+
+-- Oszlop módosítása
+ALTER TABLE tabla_nev MODIFY oszlop uj_tipus [megszoritasok];
+
+-- Oszlop törlése
+ALTER TABLE tabla_nev DROP COLUMN oszlop;
+
+-- Megszorítás hozzáadása
+ALTER TABLE tabla_nev ADD CONSTRAINT megszoritas_nev megszoritas_definicio;
+```
+
+Példa:
+```sql
+ALTER TABLE Dolgozok ADD email VARCHAR(100) UNIQUE;
+ALTER TABLE Dolgozok MODIFY nev VARCHAR(100) NOT NULL;
+ALTER TABLE Dolgozok ADD CONSTRAINT fiz_check CHECK (fizetes > 0);
+```
+
+**DROP - Objektumok törlése:**
+
+1. **Tábla törlése:**
+```sql
+DROP TABLE tabla_nev [CASCADE | RESTRICT];
+```
+
+2. **Adatbázis törlése:**
+```sql
+DROP DATABASE adatbazis_nev;
+```
+
+3. **Index törlése:**
+```sql
+DROP INDEX index_nev ON tabla_nev;
+```
+
+4. **Nézet törlése:**
+```sql
+DROP VIEW nezet_nev;
+```
+
+**TRUNCATE - Tábla tartalmának törlése:**
+```sql
+TRUNCATE TABLE tabla_nev;
+```
+
+*Integritási megszorítások a DDL-ben:*
+
+1. **Elsődleges kulcs (PRIMARY KEY):**
+```sql
+CREATE TABLE Termekek (
+  termek_id INT PRIMARY KEY,
+  nev VARCHAR(100)
+);
+```
+
+2. **Idegen kulcs (FOREIGN KEY):**
+```sql
+CREATE TABLE Rendelesek (
+  rendeles_id INT PRIMARY KEY,
+  termek_id INT,
+  mennyiseg INT,
+  FOREIGN KEY (termek_id) REFERENCES Termekek(termek_id)
+);
+```
+
+3. **Egyediségi megszorítás (UNIQUE):**
+```sql
+CREATE TABLE Felhasznalok (
+  id INT PRIMARY KEY,
+  felhasznalo_nev VARCHAR(50) UNIQUE,
+  email VARCHAR(100) UNIQUE
+);
+```
+
+4. **Nem null megszorítás (NOT NULL):**
+```sql
+CREATE TABLE Ugyfelek (
+  id INT PRIMARY KEY,
+  nev VARCHAR(100) NOT NULL,
+  email VARCHAR(100)
+);
+```
+
+5. **Értékellenőrzés (CHECK):**
+```sql
+CREATE TABLE Termekek (
+  id INT PRIMARY KEY,
+  nev VARCHAR(100),
+  ar DECIMAL(10,2) CHECK (ar > 0)
+);
+```
+
+6. **Alapértelmezett érték (DEFAULT):**
+```sql
+CREATE TABLE Rendelesek (
+  id INT PRIMARY KEY,
+  datum DATE DEFAULT CURRENT_DATE,
+  statusz VARCHAR(20) DEFAULT 'Függőben'
+);
+```

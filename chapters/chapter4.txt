@@ -1,0 +1,63 @@
+Title: 4. Fizikai fájlszervezés, feladata, költségek, paraméterek, elsődleges index, másodlagos index, bitmap index, módosítás, keresés, példákkal, előnyök, hátrányok.
+
+*Fizikai fájlszervezés, feladata:* 
+A fő célok a gyors lekérdezés, gyors adatmódosítás, minél kisebb tárolási terület. Nincs azonban általánosan legjobb optimalizáció, az egyik cél a másik rovására javítható (például indexek használatával csökken a keresési idő, nő a tárméret és a módosítási idő).
+
+Az adatbázis-alkalmazások alapján az adatbázis lehet:
+- Statikus: ritkán módosul, a lekérdezések gyorsasága a fontosabb.
+- Dinamikus: gyakran módosul, ritkán végzünk lekérdezést.
+
+A memória műveletek nagyságrendekkel gyorsabbak, mint a háttértárolóról való beolvasás/kiírás. Az iró-olvasó fej nagyobb adategységeket, blokkokat olvas be, melyek mérete függhet az operációs rendszertől, hardvertől, adatbáziskezelőtől. A blokkméretet fixnek tekintjük (Oracle esetén 8kB az alapértelmezés). Feltételezzük, hogy a beolvasás, kiírás költsége arányos a háttértároló és a memória között mozgatott blokkok számával.
+
+*Rekordok és blokkok felépítése:*
+Célszerű a fájlokat blokkokba szervezni. A fájl rekordokból áll, melyek szerkezete eltérő is lehet. A rekord tartalmaz:
+- Leíró fejlécet: rekordstruktúra leírása, belső/külső mutatók (hol kezdődik egy mező, melyek a kitöltetlen mezők, melyik a következő ill. előző rekord), törlési bit, statisztikák.
+- Mezőket: melyek üresek, vagy adatot tartalmaznak.
+
+A rekordhossz lehet állandó, vagy változó (változó hosszú mezők, ismétlődő mezők miatt). Az egyszerűség kedvéért feltesszük, hogy állandó hosszú rekordokból áll a fájl, melyek hossza az átlagos rekordméretnek felel meg.
+
+A blokkok tartalmaznak:
+- Leíró fejlécet: rekordok száma, struktúrája, fájlok leírása, belső/külső mutatók (hol kezdődik a rekord, hol vannak üres helyek, melyik a következő ill. az előző blokk), statisztikák (melyik fájlból hány rekord szerepel a blokkban).
+- Rekordokat: egy vagy több fájlból.
+- Üres helyeket.
+
+*Költségek, paraméterek:* 
+A költségek méréséhez paramétereket vezetünk be:
+- l: length, rekordméret (bájtokban).
+- b: blokkméret (bájtokban).
+- T: tuple, rekordok száma.
+- bf: blokkolási faktor, azaz mennyire rekord fér el egy blokkban. Egyenlő b/l alsó egészrészével.
+- B: a fájl mérete blokkokban. Egyenlő T/bf felső egészrészével.
+- M: memória mérete blokkokban.
+
+A relációs algebrai kiválasztás felbontható atomi kiválasztásokra, így elég ezek költségét vizsgálni. A legegyszerűbb kiválasztás az A=a, ahol "A" egy keresési mező, "a" pedig egy konstans. Kétféle bonyolultságot szokás vizsgálni, az átlagos és a legrosszabb esetet.
+
+Az esetek vizsgálatánál az is számít, hogy az A=a feltételnek megfelelő rekordból lehet-e több, vagy biztos, hogy csak egy lehet. Fel szoktuk tenni, hogy az A=a feltételnek eleget tevő rekordokból nagyjából egyforma számú rekord szerepel, ez az **egyenletességi feltétel**.
+
+Az A oszlopban szereplő különböző értékek számát **képméretnek** hívjuk, és I(A)-val jelöljük. A képméret egyenlő |∏A(R)|-el. Egyenletességi feltétel esetén T(σA=a(R)) = T(R) / I(A) és B(σA=a(R)) = B(R) / I(A).
+
+*Indexek alapjai:*
+Az indexek keresést gyorsító segédstruktúrák. Több mezőre is lehet indexet készíteni. Nem csak a főfájlt, hanem az indexet is karban kell tartani, ami plusz költséget jelent. Ha a keresési mező egyik indexmezővel sem esik egybe, akkor kupac szervezést jelent. Az indexrekordok szerkezete (a,p), ahol "a" egy érték az indexelt oszlopban, "p" egy blokkmutató, arra a blokkra mutat, amelyben az A=a értékű rekordot tároljuk. Az index mindig rendezett az indexértékek szerint.
+
+*Elsődleges index:* 
+Elsődleges index esetén a főfájl is rendezett (az indexmező szerint), így emiatt csak egy elsődleges indexet lehet megadni. Elég a főfájl minden blokkjának legkisebb rekordjához készíteni indexrekordot, így azok száma: T(I) = B (ritka index). Indexrekordból sokkal több fér egy blokkba, mint a főfájl rekordjaiból: bf(I) >> bf, azaz az indexfájl sokkal kisebb rendezett fájl, mint a főfájl: B(I) = B/bf(I) << B = T/bf.
+
+Keresésnél, mivel az indexfájlban nem szerepel minden érték, ezért csak fedő értéket kereshetünk, a legnagyobb olyan indexértéket, amely a keresett értéknél kisebb vagy egyenlő. Fedő érték keresése az index rendezettsége miatt bináris kereséssel történik: log2(B(I)). A fedő indexrekordban szereplő blokkmutatónak megfelelő blokkot még be kell olvasni. Így a költség 1+log2(B(I)) << log2(B) (rendezett eset).
+
+Módosításnál a rendezett fájlba kell beszúrni. Ha az első rekord változik a blokkban, akkor az indexfájlba is be kell szúrni, ami szintén rendezett. A megoldás az, hogy üres helyeket hagyunk a főfájl, és az indexfájl blokkjaiban is. Ezzel a tárméret duplázódhat, de a beszúrás legfeljebb egy főrekord, és egy indexrekord visszaírását jelenti.
+
+*Másodlagos index:* 
+Másodlagos index esetén a főfájl rendezetlen (az indexfájl mindig rendezett). Másodlagos indexből többet is meg lehet adni. A főfájl minden rekordjához kell készíteni indexrekordot, így az indexrekordok száma: T(I) = T (sűrű index). Indexrekordból sokkal több fér egy blokkba, mint a főfájl rekordjaiból: bf(I) >> bf, azaz az indexfájl sokkal kisebb rendezett fájl, mint a főfájl: B(I) = T/bf(I) << B=T/bf.
+
+Az indexben a keresés az index rendezettsége miatt bináris kereséssel történik: log2(B(I)). A talált indexrekordban szereplő blokkmutatónak megfelelő blokkot még be kell olvasni. Így a költség 1+log2(B(I)) << log2(B) (rendezett eset). Az elsődleges indexnél rosszabb a keresési idő, mert több az indexrekord.
+
+A főfájl kupac szervezésű. Rendezett fájlba kell beszúrni. Ha az első rekord változik a blokkban, akkor az indexfájlba is be kell szúrni, ami szintén rendezett. Megoldás: üres helyeket hagyunk a főfájl, és az indexfájl blokkjaiban is. Ezzel a tárméret duplázódhat, de a beszúrás legfeljebb egy főrekord és egy indexrekord visszaírását jelenti.
+
+*Bitmap index:* 
+A bitmap indexeket az oszlopok adott értékeihez szokták hozzárendelni, az alábbi módon:
+- Ha az oszlopban az i.-ik sor értéke megegyezik az adott értékkel, akkor a bitmap index i.-ik tagja egy 1-es.
+- Ha az oszlopban az i.-ik sor értéke viszont nem egyezik meg az adott értékkel, akkor a bitmap index i.-ik tagja egy 0.
+
+Így egy lekérdezésnél csak megfelelően össze kell AND-elni, illetve OR-olni a bitmap indexeket, és az így kapott számsorozatban megkeresni, hol van egyes.
+
+A bináris értékeket szokás szakaszhossz kódolással tömöríteni a hatékonyabb tárolás érdekében.

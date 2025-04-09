@@ -1,0 +1,33 @@
+Title: 2. Lemezegységek, blokkok, fájlok felépítése, RAID megoldások.
+
+*Lemezegységek:* 
+Az elsődleges tárak a gyorsítótár és a központi memória, ezek a leggyorsabbak ugyanakkor a legdrágábbak is. A másodlagos tárak a flash memória és a mágneslemez, melyek olcsóbbak, de lassabbak is. Külső tárak pedig az optikai lemez és a mágnesszalag, ezek a legolcsóbbak, de a leglassabbak is. A leggyakrabban a mágneslemezeket használják, a tetszőleges elérés, a viszonylagos olcsóság, és a nem felejtés miatt.
+
+*Blokkok:* 
+A lemezek korongokból állnak, melyeket mágneses tároló réteg borít. A korongfelület logikai felosztását sávnak nevezzük. A sáv hardver általi felosztása a szektor, az operációs rendszer általi felosztása a blokk. Tipikus blokkméret az 512B, 2kB, 4kB.
+
+A lemezek I/O-ja megegyezik a blokkok I/O-jával, a hardvercímet át kell alakítani cilinder, felület, és szektor számmá.
+
+*Fájlok felépítése:* 
+Minden adatbázis logikailag egy vagy több táblatérre van felosztva. A táblaterek egy vagy több fájlból állnak. Az adatfájlok mindig csak egy táblatérhez tartoznak. A táblatér mérete szerint kétféle lehet:
+- **Nagy fájlból álló táblatér** (bigfile tablespace), mely egyetlen fájlból áll, de 4Gb-nyi blokkot tartalmazhat.
+- **Kis fájlokból álló táblatér** (small file tablespace), mely több kisebb fájlból áll.
+
+Az adatbázis objektumai (mint például a táblák és indexek) szegmensként vannak eltárolva a táblatérben, így egy táblatér több szegmensből is állhat. A szegmensek egy vagy több extensből állnak, melyek továbbbonthatóak folyamatos adatblokkokra. Ez azt jelenti, hogy egy extens egy adatfájlban lehet eltárolva. Az adatblokkok az adatbázis legkisebb írható/olvasható egységei, és operációs rendszerbeli blokkokra képezhetők le. Az adatblokkok mérete az adatbázis létrehozásakor adható meg (alapbeállítás szerint 8Kb, mely a legtöbb adatbázishoz megfelelő). Statikus adatbázis (adattárház) esetén nagyobb méretet érdemes használni, dinamikus adatbázis (tranzakciós adatbázis) esetén kisebbet. A maximális méret operációs rendszer függő, a minimális méret 2Kb, de ezt ritkán ajánlott használni.
+
+*RAID megoldások:* 
+Olcsó Lemezek Redundáns Tömbje (RAID - Redundant Array of Inexpensive Disks), mely általában azonban nem igaz, a fejlettebb RAID megoldások még ma sem olcsóak. A RAID-nek 7 szintje van (0.-6.-ig), és a fő jellemzőik a megbízhatóság, a redundancia, és a párhuzamosság.
+
+A 0. szintű RAID gyakorlatilag csak lemezek összekapcsolása, a végső kapacitás a lemezek kapacitásának összege. Blokkszintű csíkozás jellemzi, maximális sávszélességgel, automatikus terheléselosztással. Annak ellenére, hogy a legjobb az írási teljesítménye, nem elterjedt, hiszen a nem redundáns tárolás miatt nem megbízható.
+
+Az 1. szintű RAID tükrözést használ ("Két megegyező példány tárolása két különböző lemezen."), így a kapacitás gyakorlatilag a lemezek kapacitásának összegének fele. Szekvenciális írás, párhuzamos olvasás jellemzi, átviteli sebessége hasonló egyetlen lemezéhez. Szintén nem terjedt el a használata, mivel a megoldások közül a legdrágább.
+
+A 2. és 3. szintű RAID bitcsíkozást használ, és itt már megjelenik a hibafelismerés és -javítás is. A RAID 2 hibajavító kódot (ECC) használ, és csak kicsivel olcsóbb az 1. szintűnél, így nem használják. A RAID 3 a 2. szintű RAID továbbfejlesztése blokkonként egy paritásbittel, továbbá a hibafelismerés a lemezvezérlőben van. Nem használják, mivel a RAID 4 magába foglalja, és ezzel kiváltja.
+
+A 4. szintű RAID blokkszintű csíkozást használ, és paritásblokkot tárol az adatlemezek minden blokkjához. Problémát jelenthet azonban a paritáslemez meghibásodása, ekkor a hibafelismerés lehetősége elveszik ugyanis.
+
+Ezt a 4. szintet magába foglaló 5. szintű RAID küszöböli ki, ahol a paritáslemez már nem torlódási pont, a paritásblokkok a lemezek között szétosztva kerülnek tárolásra.
+
+A 6. szintű RAID két lemezhibát is eltűr, P+Q redundanciasémát használ, azaz minden 4 bit adathoz 2 bit redundáns adatot tárol. Így viszont sokkal drágábbak az írások.
+
+Összegzésként elmondható, hogy a 2. és 3. szintet nem használják, mivel a RAID 4 magába foglalja őket, viszont jobb náluk. A leggyakrabban azonban az 5. szintű RAID-et használják, mivel a nála fejlettebb RAID 6 nagyon sokszor már felesleges. Az ideális szint azonban a kívánt alkalmazástól függ, a teljesítmény és a tárolás függvényében.

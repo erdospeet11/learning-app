@@ -1,0 +1,68 @@
+Title: 18. Figyelmeztető zárak, fantomok, nem megismételhető olvasás.
+
+*Adatbáziselemekből álló hierarchiák kezelése:*
+Kétféle fastruktúrával fogunk foglalkozni:
+- Az első fajta fastruktúra, amelyet figyelembe veszünk, a zárolható elemek (zárolási egységek) hierarchiája. Megvizsgáljuk, hogyan engedélyezünk zárolást mind a nagy elemekre, mint például a relációkra, mind a kisebb elemekre, mint például a reláció néhány sorát tartalmazó blokkokra vagy egyedi sorokra.
+- A másik lényeges hierarchiafajtát képezik a konkurenciavezérlési rendszerekben azok az adatok, amelyek önmagukban faszervezésűek. Ilyenek például a B-fa-indexek. A B-fák csomópontjait adatbáziselemeknek tekinthetjük, így viszont az eddig tanult zárolási sémákat szegényesen használhatjuk, emiatt egy új megközelítésre van szükségünk.
+
+Az alapkérdés, hogy kicsi vagy nagy objektumokat zároljunk?
+- Ha nagy objektumokat (például dokumentumokat, táblákat) zárolunk, akkor kevesebb zárra lesz szükség, de csökken a konkurens működés lehetősége.
+- Ha kicsi objektumokat (például számlákat, sorokat vagy mezőket) zárolunk, akkor több zárra lesz szükség, de nő a konkurens működés lehetősége.
+- Megoldás: Kicsi és nagy objektumokat is zárolhassunk!
+
+Az adatbáziselemek több (például: három) szintjét különböztetjük meg:
+- A relációk a legnagyobb zárolható elemek.
+- Minden reláció egy vagy több blokkból vagy lapból épül fel, amelyekben a soraik vannak.
+- Minden blokk egy vagy több sort tartalmaz.
+
+*Figyelmeztető zárak:*
+Az adatbáziselemek hierarchiáján a zárak kezelésére szolgáló szabályok alkotják a figyelmeztető protokollt, amely tartalmazza mind a „közönséges" zárakat, mind a „figyelmeztető" zárakat. A közönséges zárakat S és X, a figyelmeztető zárakat a közönséges zárak elé helyezett I előtaggal: IS, IX jelöljük. A figyelmeztető protokoll szabályai:
+
+- Ahhoz, hogy elhelyezzünk egy közönséges zárat valamely elemen, a hierarchia gyökerénél kell kezdenünk.
+- Ha már annál az elemnél vagyunk, amelyet zárolni szeretnénk, akkor nem kell tovább folytatnunk, hanem kérjünk a közönséges zárat.
+- Ha az elem, amelyet zárolni szeretnénk, lejjebb van a hierarchiában, akkor figyelmeztető zárat kell helyeznünk a jelenlegi elemre. Az IS figyelmeztető zárat használjuk, ha S közönséges zárat szeretnénk valamely lejjebb lévő elemen, és az IX figyelmeztető zárat, ha X zárat akarunk a mélyebben lévő elemen.
+- Ezután továbblépünk az aktuális elemtől lefelé a hierarchiában a zárolandó elem irányába, és hasonlóan cselekszünk, amíg a zárolandó elemhez el nem érünk.
+
+A figyelmeztető zárak függőségei:
+- S és IS kompatibilis, így sok tranzakció olvashat az IS figyelmeztető zárral rendelkező adatbáziselem kisebb részeiből.
+- S és IX nem kompatibilis, így ha egy tranzakció olvas egy relációt (és S zárat kap rá), más tranzakciók nem írhatnak semelyik sorába.
+- X zár nem kompatibilis semelyik másik zárral, sem az IS vagy IX figyelmeztető zárakkal. Így ha egy tranzakció írt a relációba (és X zárat szerzett), más tranzakció nem férhet hozzá semelyik sorához, sem olvasási, sem írási célból.
+- IS és IX figyelmeztető zárak kompatibilisek egymással, így, ha két tranzakció egymástól független sorokat akar zárolni (akár olvasási, akár írási célból), elérhető, hogy egyszerre tegyék ezt.
+
+A figyelmeztető zárak kompatibilitási mátrixa:
+
+|    | IS | IX | S  | X  |
+|----|----|----|----|----|
+| IS | Y  | Y  | Y  | N  |
+| IX | Y  | Y  | N  | N  |
+| S  | Y  | N  | Y  | N  |
+| X  | N  | N  | N  | N  |
+
+*Fantom probléma:*
+A fantom probléma akkor lép fel, amikor egy tranzakció kétszer hajt végre egy lekérdezést, és a második alkalommal olyan sorok (fantomok) jelennek meg az eredményben, amelyek az első lekérdezéskor nem voltak ott, vagy olyan sorok tűnnek el, amelyek az első lekérdezéskor még léteztek.
+
+Ez akkor fordulhat elő, ha egy másik tranzakció a két lekérdezés között új sort szúr be vagy töröl egy meglévő sort, amely megfelel a lekérdezés feltételeinek.
+
+A probléma megoldása:
+- Predikátumok zárolása (azaz a lekérdezési feltételek zárolása)
+- Indexzárak használata
+- Magasabb izolációs szint beállítása, mint pl. SERIALIZABLE
+
+*Nem megismételhető olvasás probléma:*
+A nem megismételhető olvasás problémája akkor lép fel, amikor egy tranzakción belül kétszer olvassuk ugyanazokat a sorokat, de a második olvasáskor más értékeket kapunk, mint az elsőnél.
+
+Ez akkor fordulhat elő, ha egy másik tranzakció a két olvasás között módosítja azokat a sorokat, amelyeket az első tranzakció olvas.
+
+Különbség a fantom problémához képest:
+- Nem megismételhető olvasásnál a meglévő sorok adatai változnak meg.
+- Fantom problémánál az eredményhalmaz sorai (száma) változik.
+
+A probléma megoldása:
+- Hosszabb ideig tartó zárak használata (a tranzakció végéig tartó zárolás)
+- Legalább a REPEATABLE READ izolációs szint használata
+
+*Izolációs szintek összehasonlítása:*
+1. **READ UNCOMMITTED**: A legalacsonyabb izolációs szint. Nem akadályozza meg sem a piszkos olvasást, sem a nem megismételhető olvasást, sem a fantomokat.
+2. **READ COMMITTED**: Megakadályozza a piszkos olvasást, de nem véd a nem megismételhető olvasás és a fantomok ellen.
+3. **REPEATABLE READ**: Megakadályozza a piszkos olvasást és a nem megismételhető olvasást, de nem véd a fantomok ellen.
+4. **SERIALIZABLE**: A legmagasabb izolációs szint. Megakadályozza a piszkos olvasást, a nem megismételhető olvasást és a fantomokat is.

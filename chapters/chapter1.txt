@@ -1,0 +1,61 @@
+Title: 1. Az Oracle adatbázis-kezelő felépítése, működése, komponensei, példányok, rendszerállományok, memóriakezelése, rendszergazdai feladatok.
+
+*Felépítése:* 
+Két fő részből áll, az **adatbázisból**, vagyis a fizikai struktúrák rendszeréből, és a **példányból**, vagyis a memória struktúrák és folyamatok rendszeréből. Az előbbi rendszer a vezérlő fájlból, a helyrehozó napló fájlokból, az adatfájlokból, a paraméterfájlból és a jelszófájlból áll, míg az utóbbi rendszert a memóriában lefoglalt System Global Area (SGA) és az adatbázis-műveletek végrehajtásáért felelős szerver- és háttérfolyamatok alkotják.
+
+*Működése:* 
+Mielőtt egy felhasználó küld egy **SQL utasítást** az Oracle szervernek, kapcsolódnia kell egy példányhoz. A felhasználói alkalmazások, vagy például az iSQL*Plus felhasználó folyamatokat (User Process) indítanak el. Amikor a felhasználó az Oracle szerverre kapcsolódik, akkor kerül létrehozásra egy folyamat, amit szerverfolyamatnak hívunk. Ez a folyamat kommunikál az Oracle példánnyal a kliensen futó felhasználó folyamat nevében. A szerver folyamat hajtja végre a felhasználó SQL utasításait. A kapcsolat egy kommunikációs útvonal a felhasználó folyamat és az Oracle szerver között. 
+
+Háromféleképp lehet egy Oracle szerverhez kapcsolódni:
+- **Operációs rendszeren keresztül**: A felhasználó belép abba az operációs rendszerbe, ahol az Oracle példány fut és elindít egy alkalmazást, amely eléri az adatbázist ezen a rendszeren. Ekkor a kommunikáció útvonalat az operációs rendszer belső kommunikációs folyamatai hozzák létre.
+- **Kliens-szerver kapcsolaton keresztül**: A felhasználó a helyi gépén elindít egy alkalmazást, amely a hálózaton keresztül kapcsolódik ahhoz a géphez, amelyen az Oracle példány fut. Ekkor a hálózati szoftvert kommunikál a felhasználó és az Oracle szerver között.
+- **Háromrétegű (three-tiered) kapcsolaton keresztül**: A felhasználó gépe a hálózaton keresztül kommunikál egy alkalmazással vagy egy hálózati szerverrel, amely szintén a hálózaton keresztül össze van kötve egy olyan géppel, amelyen az Oracle példány fut. Például a felhasználó egy böngésző segítségével elér egy NT szerveren futó alkalmazást, amely egy távoli UNIX rendszeren futó Oracle adatbázisból gyűjti ki az adatokat.
+
+Kapcsolódáskor egy munkaszakasz (session) kezdődik. A munkaszakasz a felhasználó érvényesítése (validálása) esetén kezdődik és a kilépéséig vagy egy abnormális megszakításig tart. Egy felhasználó több munkaszakaszt is nyithat. Ehhez szükséges, hogy az Oracle szerver elérhető, használható legyen.
+
+*Komponensek:* 
+Amikor egy alkalmazás vagy Oracle eszköz (mint például az Enterprise Manager) elindul, akkor a szerver elindít egy szerverfolyamatot, amely lehetővé teszi az alkalmazás utasításainak végrehajtását. Az Oracle egy példány indításakor háttérfolyamatokat is elindít, amelyek kommunikálnak egymással és az operációs rendszerrel. A háttérfolyamatok kezelik a memóriát, puffereket, végrehajtják az írási, olvasási műveleteket a lemezen, karbantartásokat végeznek. 
+
+A legfontosabb háttérfolyamatok a következők:
+- **System monitor (SMON)**, mely katasztrófa utáni indításkor elvégzi a helyreállítást.
+- **Process monitor (PMON)**, mely ha egy felhasználói folyamat megszakad, akkor elvégzi a szükséges takarítást, karbantartást.
+- **Database writer (DBWn)**, mely az adatpufferből kiírja lemezre (fájlba) a módosított blokkokat.
+- **Checkpoint (CKPT)**, mely ellenőrzési pontok esetén elindítja a DBWn folyamatokat és frissíti az adatbázis összes adatállományát és vezérlő állámányát.
+- **Log writer (LGWR)**, mely a helyreállítási napló bejegyzéseit írja ki a lemezre.
+- **Archiver (ARCn)**, mely a helyreállítási napló állomány másolatait a mentésre kijelölt lemezekre írja ki, mikor egy naplófájl betelik vagy a következő online redo naplóba folytatódik az írás (log switch).
+
+*Példányok:* 
+Egy Oracle példány két részből áll: memória pufferekből, melyet **System Global Area-nak (SGA)** nevezünk, és háttérfolyamatokból. A példány tétlen (idle) állapotban van, amíg nem indítják el. Indításnál a példány a paraméter fájlból kiolvasott adatoknak megfelelően lesz konfigurálva. Miután a példány elindult, és az adatbázis nyitva van, a felhasználók hozzáférhetnek az adatbázisban tárolt adatokhoz.
+
+*Rendszerállományok:* 
+A fontosabb rendszerállományok: a **vezérlő fájl** (Control file), a **helyrehozó napló fájlok** (Redo Log files), a **paraméterfájl** (Parameter file) és a **jelszófájl** (Password file). A példány indításakor, amikor az adatbázist felcsatlakoztatjuk, be kell olvasni a vezérlő fájlt. A vezérlő fájl megléte kritikus, nélküle nem lehet megnyitni az adatfájlokat, ugyanis a benne lévő bejegyzések határozzák meg az adatbázist alkotó fizikai fájlokat. 
+
+Ha további fájlokat adunk az adatbázishoz a vezérlő fájl automatikusan módosul. A vezérlő fájl helyét az inicializálási paraméterben adjuk meg. Adatvédelmi szempontból fontos, hogy legalább három különböző fizikai eszközön legyen másolata (multiplexálás). Ez is inicializálási paraméterrel adható meg, több fájlnév megadása esetén az Oracle szerver elvégzi a többszörös másolatok szinkronizációját. 
+
+A napló állományok az adatbázisbeli változásokat rögzítik, melyek tranzakciók és belső szerver akciók következményei. Védik a konzisztens állapotot az áramkimaradás, lemezhiba, rendszerhiba esetén. Multiplexálni kell őket adatvédelmi okokból, nehogy egy esetleges lemezhiba esetén elvesszen a napló tartalma. Maga a napló fájlok csoportjaiból áll, egy-egy csoportban (melyek azonosítószámmal vannak ellátva) egy fájl és a másolatai vannak. A naplóíró folyamat (Log Writer Process - LGWR) írja ki a helyrehozó rekordokat a pufferből egy csoportba, amíg vagy tele nem lesz a fájl, vagy nem érkezik egy direkt felszólítás, hogy a következő csoportba folytassa a kiírást. A helyrehozó csoportok feltöltése körkörösen történik. 
+
+A paraméter fájl határozza meg hogy a példány hogyan lesz konfigurálva indításnál, tartalmazza például az SGA memóriarészeinek méretét. A jelszó fájl miatt lehetséges távolról csatlakoznia felhasználóknak, hogy adminisztratív feladatokat végezhessenek, meghatározza kik indíthatnak el és állíthatnak le egy példányt.
+
+*Memóriakezelés:* 
+Egy Oracle példányhoz tartozó memóriaszerkezet két fő részből áll, a **System Global Area-ból (SGA)** és a **Program Global Area-ból (PGA)**. Az SGA egy megosztott memóriaterület, minden szerver- és háttérfolyamat számára elérhető, továbbá a példányhoz tartozó adatokat és vezérlési információkat is tartalmazhat. A PGA ezzel szemben privát memóriaterület, azaz minden szerver- és háttérfolyamathoz külön, saját PGA tartozik. 
+
+Az SGA a következő adatszerkezetekből áll:
+- **Database buffer cache**, mely a beolvasott adatblokkok pufferterülete.
+- **Redo log buffer**, mely a helyreállításhoz szükséges redo napló pufferterülete, innen íródik ki a napló a lemezen tárolt redo naplófájlokba.
+- **Shared pool**, mely a felhasználók által használható közös puffer.
+- **Large pool**, mely a nagyon nagy Input/Output igények kielégítéséhez használható puffer.
+- **Java pool**, mely a Java Virtuális Gép (JVM) Java kódjaihoz és adataihoz használható puffer.
+- **Streams pool**, mely az Oracle Stream-ek pufferterülete.
+
+Az SGA dinamikus, azaz a pufferek mérete szükség esetén a példány leállítása nélkül változtatható. A PGA mérete és tartalma attól függ, hogy a példányt osztott módra (Shared Server Mode) konfiguráltuk-e. 
+
+A PGA általában a következőkből áll:
+- **Private SQL area**, mely futási időben szükséges memóriaszerkezeteket, adatokat, hozzárendelési információkat tartalmazza. Minden olyan munkaszakasz (session), amely kiad egy SQL utasítást, lefoglal egy saját SQL területet.
+- **Session memory**, mely a munkaszakaszhoz (session) tartozó információk, változók tárolásához szükséges terület.
+
+*Rendszergazdai feladatok:* 
+Az **Oracle Adatbázis Rendszergazda** (Oracle Database Administrator - DBA) feladata az adatbázis megtervezése, megvalósítása, és karbantartása. Elsőként fel kell mérnie a szerver hardverét, meg kell győződnie annak megfelelőségéről (kapacitás, hiánytalanság, stb.), majd telepítenie kell az Oracle szoftvert (ezek ismerete szintén elengedhetetlen). 
+
+Ezek után az adatbázist létre kell hoznia, a felhasználók számára elérhetővé kell tennie, és meg kell valósítania az adatbázistervet. Mindezek mellett gondoskodnia kell a megfelelő biztonsági mentésekről, az esetleges hibák utáni helyreállításról, és felügyelnie kell az adatbázis teljesítményét.
+
+További információk az Oracle dokumentációjában: https://docs.oracle.com/en/database/

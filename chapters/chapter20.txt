@@ -1,0 +1,83 @@
+Title: 20. Időbélyegzés, érvényesítés
+
+*Időbélyegzés (Timestamping):*
+Az időbélyegzés egy konkurenciavezérlési mechanizmus, amely minden tranzakcióhoz egy egyedi időbélyeget rendel, így biztosítva azok végrehajtási sorrendjét. Az időbélyeg egy olyan időpontot jelent, amikor a tranzakció először kapcsolatba lép az adatbázis-kezelő rendszerrel.
+
+**Időbélyegzés alapelvei:**
+- Minden tranzakció egyedi időbélyeget kap a rendszerbe lépéskor
+- Az időbélyegek szigorúan monoton növekvőek
+- A konfliktusok feloldása az időbélyegek alapján történik
+- A régebbi tranzakciók elsőbbséget élveznek ("first come, first served" elv)
+
+*Időbélyegzési algoritmusok típusai:*
+
+**1. Alap időbélyegzés (Basic Timestamping):**
+- Minden adatelemet két időbélyeggel látunk el:
+  - Read timestamp (RT): a legutolsó olvasó tranzakció időbélyege
+  - Write timestamp (WT): a legutolsó író tranzakció időbélyege
+- Olvasási szabály: Ha a tranzakció időbélyege (TS) < WT, akkor az olvasás elutasításra kerül és a tranzakció visszagörgetésre (rollback) kerül
+- Írási szabály: Ha TS < RT vagy TS < WT, akkor az írás elutasításra kerül és a tranzakció visszagörgetésre kerül
+
+**2. Többverziós időbélyegzés (Multiversion Timestamping):**
+- Minden írási művelet az adat egy új verzióját hozza létre az időbélyeggel együtt
+- A tranzakció mindig a számára megfelelő verziót olvassa (amelynek időbélyege ≤ a tranzakció időbélyege)
+- Csökkenti a konfliktusok számát és minimalizálja a visszagörgetéseket
+- Több tárolóhelyet igényel a verziók tárolásához
+
+*Érvényesítés (Validation):*
+Az érvényesítési alapú konkurenciavezérlés (más néven optimista konkurenciavezérlés) abból a feltételezésből indul ki, hogy a konfliktusok ritkán fordulnak elő, így nincs szükség a műveletek azonnali ellenőrzésére.
+
+**Érvényesítési technika fázisai:**
+1. **Olvasási fázis**:
+   - A tranzakció helyi változókban dolgozik
+   - Minden olvasás/írás csak a lokális másolatokon történik
+   - Nincs ellenőrzés vagy zárolás ebben a fázisban
+
+2. **Érvényesítési fázis**:
+   - A rendszer ellenőrzi, hogy a tranzakció nem ütközik-e más tranzakciókkal
+   - Ha nincs konfliktus, a tranzakció folytatódhat
+   - Konfliktus esetén a tranzakció visszagörgetésre kerül
+
+3. **Írási fázis**:
+   - A lokális változtatások átvezetése az adatbázisba
+   - A tranzakció befejezettnek tekinthető
+
+**Érvényesítési módszerek:**
+
+*Visszatekintő érvényesítés (Backward Validation):*
+- Az aktív tranzakciót a már befejezett tranzakciókkal hasonlítjuk össze
+- Ellenőrizzük, hogy az olvasási halmaza nem ütközik-e a befejezett tranzakciók írási halmazaival
+- Kevesebb információt kell tárolni a már befejezett tranzakciókról
+
+*Előretekintő érvényesítés (Forward Validation):*
+- Az aktív tranzakciót a folyamatban lévő tranzakciókkal hasonlítjuk össze
+- Ellenőrizzük, hogy az írási halmaza nem ütközik-e a folyamatban lévő tranzakciók olvasási halmazaival
+- Több információt kell tárolni a folyamatban lévő tranzakciókról
+
+*Időbélyegzés és érvényesítés összehasonlítása:*
+
+**Időbélyegzés előnyei:**
+- Determinisztikus ütemezés
+- Holtpont-mentesség
+- Egyszerű implementáció
+- Jól párhuzamosítható
+
+**Időbélyegzés hátrányai:**
+- Sok tranzakció visszagörgetése nagy terhelés esetén
+- Az időbélyegek szinkronizálása elosztott rendszerekben kihívást jelent
+- Többletterhelés az időbélyegek kezelése miatt
+
+**Érvényesítés előnyei:**
+- Kevesebb zárolás, magasabb áteresztőképesség alacsony konfliktus esetén
+- Nincs holtpont
+- Jól működik olvasás-intenzív környezetben
+
+**Érvényesítés hátrányai:**
+- Magas konfliktus esetén nagy a visszagörgetések száma
+- A helyi másolatok tárolása memóriaigényes lehet
+- Az érvényesítési fázis szűk keresztmetszetet jelenthet
+
+*Gyakorlati alkalmazások:*
+- Az időbélyegzés elsősorban elosztott adatbázisokban és valós idejű rendszerekben hasznos
+- Az érvényesítés webalkalmazásokban és olvasás-intenzív környezetekben előnyös
+- Modern adatbázis-kezelők gyakran hibrid megközelítést alkalmaznak, kombinálva a különböző technikákat

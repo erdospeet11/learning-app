@@ -1,0 +1,62 @@
+Title: 5. Fizikai fájlszervezés, feladata, költségek, paraméterek, többszintű indexek, B-fa, B+-fa, B*-fa, módosítás, keresés, példákkal, előnyök, hátrányok.
+
+*Fizikai fájlszervezés, feladata:* 
+A fő célok a gyors lekérdezés, gyors adatmódosítás, minél kisebb tárolási terület. Nincs azonban általánosan legjobb optimalizáció, az egyik cél a másik rovására javítható (például indexek használatával csökken a keresési idő, nő a tárméret és a módosítási idő).
+
+Az adatbázis-alkalmazások alapján az adatbázis lehet:
+- Statikus: ritkán módosul, a lekérdezések gyorsasága a fontosabb.
+- Dinamikus: gyakran módosul, ritkán végzünk lekérdezést.
+
+A memória műveletek nagyságrendekkel gyorsabbak, mint a háttértárolóról való beolvasás/kiírás. Az iró-olvasó fej nagyobb adategységeket, blokkokat olvas be, melyek mérete függhet az operációs rendszertől, hardvertől, adatbáziskezelőtől. A blokkméretet fixnek tekintjük (Oracle esetén 8kB az alapértelmezés). Feltételezzük, hogy a beolvasás, kiírás költsége arányos a háttértároló és a memória között mozgatott blokkok számával.
+
+*Rekordok és blokkok felépítése:*
+Célszerű a fájlokat blokkokba szervezni. A fájl rekordokból áll, melyek szerkezete eltérő is lehet. A rekord tartalmaz:
+- Leíró fejlécet: rekordstruktúra leírása, belső/külső mutatók (hol kezdődik egy mező, melyek a kitöltetlen mezők, melyik a következő ill. előző rekord), törlési bit, statisztikák.
+- Mezőket: melyek üresek, vagy adatot tartalmaznak.
+
+A rekordhossz lehet állandó, vagy változó (változó hosszú mezők, ismétlődő mezők miatt). Az egyszerűség kedvéért feltesszük, hogy állandó hosszú rekordokból áll a fájl, melyek hossza az átlagos rekordméretnek felel meg.
+
+A blokkok tartalmaznak:
+- Leíró fejlécet: rekordok száma, struktúrája, fájlok leírása, belső/külső mutatók (hol kezdődik a rekord, hol vannak üres helyek, melyik a következő ill. az előző blokk), statisztikák (melyik fájlból hány rekord szerepel a blokkban).
+- Rekordokat: egy vagy több fájlból.
+- Üres helyeket.
+
+*Költségek, paraméterek:* 
+A költségek méréséhez paramétereket vezetünk be:
+- l: length, rekordméret (bájtokban).
+- b: blokkméret (bájtokban).
+- T: tuple, rekordok száma.
+- bf: blokkolási faktor, azaz mennyire rekord fér el egy blokkban. Egyenlő b/l alsó egészrészével.
+- B: a fájl mérete blokkokban. Egyenlő T/bf felső egészrészével.
+- M: memória mérete blokkokban.
+
+A relációs algebrai kiválasztás felbontható atomi kiválasztásokra, így elég ezek költségét vizsgálni. A legegyszerűbb kiválasztás az A=a, ahol "A" egy keresési mező, "a" pedig egy konstans. Kétféle bonyolultságot szokás vizsgálni, az átlagos és a legrosszabb esetet.
+
+Az esetek vizsgálatánál az is számít, hogy az A=a feltételnek megfelelő rekordból lehet-e több, vagy biztos, hogy csak egy lehet. Fel szoktuk tenni, hogy az A=a feltételnek eleget tevő rekordokból nagyjából egyforma számú rekord szerepel, ez az **egyenletességi feltétel**.
+
+Az A oszlopban szereplő különböző értékek számát **képméretnek** hívjuk, és I(A)-val jelöljük. A képméret egyenlő |∏A(R)|-el. Egyenletességi feltétel esetén T(σA=a(R)) = T(R) / I(A) és B(σA=a(R)) = B(R) / I(A).
+
+*Indexek alapjai:*
+Az indexek keresést gyorsító segédstruktúrák. Több mezőre is lehet indexet készíteni. Nem csak a főfájlt, hanem az indexet is karban kell tartani, ami plusz költséget jelent. Ha a keresési mező egyik indexmezővel sem esik egybe, akkor kupac szervezést jelent. Az indexrekordok szerkezete (a,p), ahol "a" egy érték az indexelt oszlopban, "p" egy blokkmutató, arra a blokkra mutat, amelyben az A=a értékű rekordot tároljuk. Az index mindig rendezett az indexértékek szerint.
+
+*Többszintű indexek:* 
+Az indexfájl (1. indexszint) is fájl, ráadásul rendezett, így ezt is meg lehet indexelni, elsődleges index-szel. A főfájl lehet rendezett vagy rendezetlen (az indexfájl mindig rendezett). A t-szintű index: az indexszinteket is indexeljük, összesen t szintig.
+
+A t-ik szinten (I(t)) bináris kereséssel keressük meg a fedő indexrekordot. Követjük a mutatót, minden szinten, és végül a főfájlban: log2(B(I(t))) + t blokkolvasás. Ha a legfelső szint 1 blokkból áll, akkor t+1 blokkolvasást jelent. Minden szint blokkolási faktora megegyezik, mert egyforma hosszúak az indexrekordok.
+
+| | Főfájl | 1. szint | 2. szint... | t. szint |
+|---|---|---|---|---|
+| Blokkok száma | B | B/bf(I) | B/bf(I)2... | B/bf(I)t |
+| Rekordok száma | T | B | B/bf(I)... | B/bf(I)(t-1) |
+| Blokkolási faktor | bf | bf(I) | bf(I)... | bf(I) |
+
+A t-ik szinten 1 blokk: 1=B/bf(I)t. Azaz t=logbf(I)B < log2(B), tehát jobb a rendezett fájlszervezésnél. A logbf(I)B < log2(B(I)) is teljesül általában, így az egyszintű indexeknél is gyorsabb.
+
+*B-fa, B+-fa, B*-fa:* 
+Logikailag az index egy rendezett lista. Fizikailag a rendezett sorrendet táblába rendezett mutatók biztosítják. A fa struktúrájú indexek B-fákkal ábrázolhatóak. A B-fák megoldják a bináris fák kiegyenlítetlenségi problémáját, mivel "alulról" töltjük fel őket. A B-fa egy csomópontjához több kulcsérték tartozhat. A mutatók más csomópontokra mutatnak, és így az összes kulcsértékre az adott csomóponton.
+
+Mivel a B-fák kiegyenlítettek (minden ág egyenlő hosszú, vagyis ugyanazon a szinten fejeződik be), kiküszöbölik a változó elérési időket, amik a bináris fákban megfigyelhetőek. Bár a kulcsértékek és a hozzájuk kapcsolódó címek még mindig a fa minden szintjén megtalálhatók, és ennek eredménye: egyenlőtlen elérési utak, és egyenlőtlen elérési idő, valamint komplex fa-keresési algoritmus az adatfájl logikailag soros olvasására. Ez kiküszöbölhető, ha nem engedjük meg az adatfájl címek tárolását levélszint felett. Ebből következően: minden elérés ugyanolyan hosszú utat vesz igénybe, aminek egyenlő elérési idő az eredménye, és egy logikailag soros olvasása az adatfájlnak a levélszint elérésével megoldható. Nincs szükség komplex fa-keresési algoritmusra.
+
+A **B+-fa** egy olyan B-fa, mely legalább 50%-ban telített. A szerkezeten kívül a telítettséget biztosító karbantartó algoritmusokat is beleértjük.
+
+A **B*-fa** egy olyan B-fa, mely legalább 66%-ban telített.

@@ -1,0 +1,96 @@
+Title: 12. Nem-semmisségi (redo) naplózás és helyreállítás, kombinált (undo/redo) naplózás és helyreállítás, média-helyreállítás, adattárház, analitikus feldolgozás, OLAP, adatbányászat.
+
+*Nem-semmisségi (redo) naplózás:*
+A nem-semmisségi (redo) naplózás esetén a naplóbejegyzés az új értéket tartalmazza (T, X, új érték).
+
+A semmisségi (undo) naplózással szemben a nem-semmisségi (redo) naplózás akkor használható, ha egy adatbáziselem új értéke soha nem kerül a lemezre, csak annak COMMIT-ja (véglegesítése) esetén. Az adatbázis esetleges rendszerhiba esetén a COMMIT-tált tranzakciók esetén a naplóbejegyzés szerinti új értékekkel állítható helyre.
+
+Nem-semmisségi naplózási szabályok:
+- R1. Ha a T tranzakció módosítja az X adatbáziselemet, a (T, X, új érték) naplóbejegyzést előbb a lemezre kell írni, mielőtt az X új értékét a lemezre írná a rendszer.
+- R2. Ha egy tranzakció COMMIT parancsot kap, akkor a COMMIT naplóbejegyzést a lemezre kell írni.
+
+A nem-semmisségi naplózás esetében tehát a lemezre írás sorrendje:
+- Az adatbáziselemek módosítására vonatkozó naplóbejegyzések.
+- A COMMIT naplóbejegyzés.
+- Maguk a módosított adatbáziselemek. (A harmadik lépés sem történik meg feltétlenül, ha helyreállítás nélkül a rendszer leáll, akkor a naplóbejegyzések alapján állítható helyre.)
+
+Helyreállítás nem-semmisségi naplózás alapján:
+- A helyreállítás-kezelő a naplót az elejétől a végéig átvizsgálja (azaz időrendben).
+- Minden olyan (T, X, v) bejegyzésre, ahol később T COMMIT/ABORT bejegyzése is előfordul, az X adatbáziselem v értékét újra beírja az adatbázisba.
+- Minden COMMIT bejegyzésre ráír egy újabb COMMIT bejegyzést, így nem kell kétszer ugyanazt a hatást végrehajtani.
+
+*Kombinált (undo/redo) naplózás:*
+Ez esetben a naplóbejegyzés tartalmazza a régi és az új értéket is (T, X, régi érték, új érték).
+
+Kombinált naplózási szabályok:
+- UR1. Ha a T tranzakció módosítja az X adatbáziselemet, a (T, X, régi érték, új érték) naplóbejegyzést előbb a lemezre kell írni, mielőtt az X új értékét a lemezre írná a rendszer.
+- UR2. Ha a T tranzakció COMMIT parancsot kap, akkor a COMMIT naplóbejegyzést azonnal a lemezre kell írni.
+
+Előnye a tranzakció futásának leállítása előtti visszavonhatóság és a REDO funkció biztosíthatósága. Olyan, mint a semmisségi és a nem-semmisségi naplózási stratégia keveréke, de mindkettőnél nagyobb szabadságot ad a pufferkezelőnek abban, hogy mikor írja a módosított blokkokat háttértárra.
+
+Helyreállítás kombinált naplózás alapján:
+A rendszer először a nem teljes vagy abortált tranzakciók módosításait vonja vissza (az undo naplónál látott módszer szerint), majd a teljes, committ-ált tranzakciók nem kiírt módosításait viszi fel az adatbázisra (redo naplónál látott módszer szerint). Ennek lépései:
+
+1. A losers listába a végéről kezdve először is felveszünk minden olyan tranzakciót (nevet), melynek nem találtunk eddig COMMIT vagy ABORT bejegyzését. Aztán a winners listába felveszünk minden olyan tranzakciót, melynek COMMIT bejegyzését már láttuk. A naplót a végétől kezdve olvassuk:
+   - Ha <Ti COMMIT> vagy <Ti ABORT> bejegyzést találunk, és Ti nem volt eddig sem a winner, sem a loser listában, akkor felvesszük a winners, illetve a losers listába.
+   - Ha <Ti, X, v, w> bejegyzést találunk, és Ti a losers listában van, akkor X értékét v-re állítjuk, és a naplóba kiírunk egy <Ti, X, v> undo bejegyzést.
+   - Egyéb esetben nem teszünk semmit.
+
+2. A naplót az elejétől kezdve olvassuk:
+   - Ha <Ti, X, v, w> bejegyzést találunk, és Ti a winners listában van, akkor X értékét w-re állítjuk, és a naplóba kiírunk egy <Ti, X, w> redo bejegyzést.
+   - Egyéb esetben nem teszünk semmit.
+
+*Média helyreállítás:*
+A számítástechnikai eszközrendszernek (média), amelyen az adatbázis tárolódik, médiabeli meghibásodásaiból fellépő adatvesztések megoldása. Ilyen esetben a helyreállítást általában legutóbbi mentésből végzik, az undo naplót használva. Lépései:
+
+1. Szükség esetén új médium installálása a meghibásodott helyett (mondjuk, új merevlemez).
+2. Az utolsó archív másolat visszatöltése (restore).
+3. Az archív másolat készítése óta keletkezett naplókat alkalmazzuk a megfelelő rend szerint.
+
+A naplózás akkor folytonos, ha egy archív másolat elkészítése után a naplózás olyan időpontban történik, hogy az archív másolat készítésének befejezésétől kezdve nem hiányzik egyetlen tranzakció által végrehajtott műveletre vonatkozó naplóbejegyzés sem.
+
+*Adattárház (Data Warehouse):*
+Az adattárház több különböző forrásból származó, integrált, az időbeliséget is figyelembe vevő adatoknak olyan gyűjteménye, amely elsősorban döntéstámogatási céllal jött létre. 
+
+Jellemzői:
+- **Témaorientált**: Az adatokat nem a forrásadatbázisok funkciói szerint, hanem az adattárház témái szerint szervezzük.
+- **Integrált**: Az adatokat egységes formára hozzuk.
+- **Időfüggő**: Az adatok mindig tartalmaznak időbeli információt.
+- **Nem változó**: Az adatok csak olvashatók, nem módosíthatók.
+- **Összegzett**: Összegzett adatokat tartalmaz.
+
+*Analitikus feldolgozás és OLAP:*
+Az on-line analitikus feldolgozás (OLAP – On-Line Analytical Processing) olyan adatbázis-technológia, amely az adattárházak adataihoz való hozzáférést optimalizálja.
+
+OLAP kocka:
+Az OLAP kocka egy többdimenziós adatszerkezet (n-dimenziós is lehet), ahol:
+- **Dimenziók**: Az adatok csoportosítására szolgáló szempontok, jellemzők (pl. földrajzi régió, idő, termék).
+- **Mértékek (Measures)**: A vizsgált mutatók, számszerűsíthető értékek.
+- **Tagok (Members)**: Egy adott dimenzióhoz tartozó konkrét értékek.
+- **Cellák**: A dimenziók találkozásában lévő értékek, melyek a mértékeket tartalmazzák.
+
+OLAP műveletek:
+- **Forgatás (Pivot)**: A nézet átrendezése a dimenziók átszervezésével.
+- **Szeletelés (Slice)**: Egy dimenzió egyetlen értékének kiválasztása, ezáltal egy (n-1) dimenziós kocka létrehozása.
+- **Kockázás (Dice)**: Több dimenzió több értékének kiválasztása, ezáltal egy alkocka létrehozása.
+- **Lefúrás (Drill Down)**: Részletesebb adatok megjelenítése.
+- **Felfúrás (Roll Up)**: Adatok magasabb szintű összesítése.
+
+*Adatbányászat (Data Mining):*
+Az adatbányászat nagy adathalmazokban rejtett összefüggések, minták feltárására szolgáló módszerek összessége. Célja olyan új, használható és érthető ismeretek kinyerése az adatokból, amelyek nem voltak előre ismertek.
+
+Adatbányászati módszerek:
+- **Osztályozás (Classification)**: Előre definiált kategóriákba sorolás.
+- **Klaszterezés (Clustering)**: Hasonló objektumok csoportosítása előre definiált kategóriák nélkül.
+- **Asszociációs szabályok feltárása**: Gyakran együtt előforduló elemek azonosítása (pl. kosárelemzés).
+- **Regresszió**: Numerikus értékek megjóslására szolgáló modellek készítése.
+- **Idősor-elemzés**: Időben rendezett adatsorokban felismerhető minták azonosítása.
+- **Anomália-detektálás**: A normális mintázattól eltérő adatok azonosítása.
+
+Az adatbányászat folyamata:
+1. Probléma meghatározása
+2. Adatgyűjtés és előkészítés
+3. Adattisztítás és transzformáció
+4. Modellalkotás és tanítás
+5. Kiértékelés és értelmezés
+6. Alkalmazás és monitorozás

@@ -1,0 +1,112 @@
+Title: 11. Rendszerhibák kezelése, konzisztens adatbázis, tranzakciók, hibafajták, semmisségi (undo) naplózás és helyreállítás, ellenőrzőpont, ellenőrzőpont működés közben, példák.
+
+*Konzisztens adatbázis:*
+Konzisztens állapot: kielégíti az összes feltételt (megszorítást). Konzisztens adatbázisnak nevezünk egy konzisztens állapotú adatbázist.
+
+A konzisztencia sérülhet:
+- **Tranzakcióhiba**: hibásan megírt, rosszul ütemezett, félbehagyott tranzakciók.
+- **Adatbázis-kezelési hiba**: az adatbázis-kezelő valamelyik komponense nem, vagy rosszul hajtja végre a feladatát.
+- **Hardverhiba**: elvész egy adat, vagy megváltozik az értéke.
+- **Adatmegosztásból származó hiba**.
+
+*Tranzakciók:*
+Tranzakció a konzisztenciát megtartó adatkezelő műveletek sorozata. Ezek után mindig feltesszük: Ha T tranzakció konzisztens állapotból indul + T tranzakció csak egyedül futna le → T konzisztens állapotban hagyja az adatbázis.
+
+Helyesség feltétele:
+- Ha leáll egy vagy több tranzakció (abort, vagy hiba miatt), akkor is konzisztens adatbázist kapunk.
+- Mind egyes tranzakció induláskor konzisztens adatbázist lát.
+
+A tranzakció az adatbázis-műveletek végrehajtási egysége, amely DML-beli utasításokból áll, és a következő tulajdonságokkal rendelkezik:
+- **Atomosság (A)**: a tranzakció „mindent vagy semmit" jellegű végrehajtása (vagy teljesen végrehajtjuk, vagy egyáltalán nem hajtjuk végre).
+- **Konzisztencia (C)**: az a feltétel, hogy a tranzakció megőrizze az adatbázis konzisztenciáját, azaz a tranzakció végrehajtása után is teljesüljenek az adatbázisban előírt konzisztenciamegszorítások.
+- **Elkülönítés (I)**: az a tény, hogy minden tranzakciónak látszólag úgy kell lefutnia, mintha ez alatt az idő alatt semmilyen másik tranzakciót sem hajtanánk végre.
+- **Tartósság (D)**: az a feltétel, hogy ha egyszer egy tranzakció befejeződött, akkor már soha többé nem veszhet el a tranzakciónak az adatbázison kifejtett hatása.
+
+A konzisztenciát mindig adottnak tekintjük. A másik három tulajdonságot viszont az adatbázis-kezelő rendszernek kell biztosítania, de ettől időnként eltekintünk.
+
+Feltesszük, hogy az adatbázis adategységekből, elemekből áll. Az adatbáziselem a fizikai adatbázisban tárolt adatok egyfajta funkcionális egysége, amelynek értékét tranzakciókkal lehet elérni (kiolvasni) vagy módosítani (kiírni).
+
+Az adatbáziselem lehet:
+- reláció (vagy OO megfelelőjét, az osztálykiterjedés),
+- relációsor (vagy OO megfelelője, az objektum),
+- lemezblokk,
+- lap.
+
+A tranzakció és az adatbázis kölcsönhatásának három fontos helyszíne van:
+- Az adatbázis elemeit tartalmazó lemezblokkok területe.
+- (D) A pufferkezelő által használt virtuális vagy valós memóriaterület.
+- (M) A tranzakció memóriaterülete.
+
+OLVASÁS:
+Ahhoz, hogy a tranzakció egy X adatbáziselemet beolvashasson, azt előbb memóriapuffer(ek)be (P) kell behozni, ha még nincs ott. Ezt követően tudja a puffer(ek) tartalmát a tranzakció a saját memóriaterületére (t) beolvasni.
+
+ÍRÁS:
+Az adatbáziselem új értékének kiírása fordított sorrendben történik: az új értéket a tranzakció alakítja ki a saját memóriaterületén, majd ez az új érték másolódik át a megfelelő puffer(ek)be. Fontos, hogy egy tranzakció sohasem módosíthatja egy adatbáziselem értékét közvetlenül a lemezen!
+
+Az adatmozgatások alapműveletei:
+INPUT(X): Az X adatbáziselemet tartalmazó lemezblokk másolása a memóriapufferbe.
+
+READ(X,t): Az X adatbáziselem bemásolása a tranzakció t lokális változójába.
+
+Részletesebben: ha az X adatbáziselemet tartalmazó blokk nincs a memóriapufferben, akkor előbb végrehajtódik INPUT(X). Ezután kapja meg a t lokális változó X értékét.
+
+WRITE(X,t): A t lokális változó tartalma az X adatbáziselem memóriapufferbeli tartalmába másolódik.
+
+Részletesebben: ha az X adatbáziselemet tartalmazó blokk nincs a memóriapufferben, akkor előbb végrehajtódik INPUT(X). Ezután másolódik át a t lokális változó értéke a pufferbeli X-be.
+
+OUTPUT(X): Az X adatbáziselemet tartalmazó puffer kimásolása lemezre.
+
+Az adatbázis elem mérete:
+FELTEVÉS: az adatbáziselemek elférnek egy-egy lemezblokkban és így egy-egy pufferben is, azaz feltételezhetjük, hogy az adatbáziselemek pontosan a blokkok. Ha az adatbáziselem valójában több blokkot foglalna el, akkor úgy is tekinthetjük, hogy az adatbáziselem minden blokkméretű része önmagában egy adatbáziselem.
+
+A naplózási mechanizmus atomos, azaz vagy lemezre írja X összes blokkját, vagy semmit sem ír ki. A READ és a WRITE műveleteket a tranzakciók használják, az INPUT és az OUTPUT műveleteket a pufferkezelő alkalmazza, illetve bizonyos feltételek mellett az OUTPUT műveletet a naplózási rendszer is használja.
+
+Hibafajták:
+- **Hibás adatbevitel**: pl. elütünk egy számot. Megoldás: triggerek, megszorítások.
+- **Készülékhibák**: A lemezegységek jelentős sérülése, elsősorban a fejek katasztrófái, az egész lemez olvashatatlanná válását okozhatják.
+- **Katasztrofális hibák**: Amikor az adatbázist tartalmazó eszköz teljesen tönkremegy. Pl. tűzkár. Védekezés: archiválás, redundáns osztott másolatok.
+- **Rendszerhibák**: Minden tranzakciónak van állapota, mely azt képviseli, hogy mi történt eddig a tranzakcióban. Az állapot tartalmazza a tranzakció kódjában a végrehajtás pillanatnyi helyét és a tranzakció összes lokális változójának értékét. A rendszerhibák azok a problémák, melyek a tranzakció állapotának elvesztését okozhatják.
+
+Semmisségi naplózás:
+A napló (log) naplóbejegyzések (log records) sorozata, melyek mindegyike arról tartalmaz valami információt, hogy mit tett egy tranzakció. Ha rendszerhiba fordul elő, akkor a napló segítségével rekonstruálható, hogy a tranzakció mit tett a hiba fellépéséig. A naplót (az archív mentéssel együtt) használhatjuk akkor is, amikor eszközhiba keletkezik a naplót nem tároló lemezen.
+
+Naplóbejegyzések:
+- T i kezdődik: (T i, START)
+- T i írja A-t: (T i, A, régi érték, új érték) (néha elég csak a régi vagy csak az új érték, a naplózási protokolltól függően)
+- T i rendben befejeződött: (T i, COMMIT)
+- T i a normálisnál korábban fejeződött be: (T i, ABORT)
+
+Az adatbázis visszaállítását olyan állapotba, mintha a tekintett tranzakció nem is működött volna semmisségi (undo) naplózásnak nevezzük.
+
+Undo naplózás szabályai:
+- U1. Ha a T tranzakció módosítja az X adatbáziselemet, akkor a (T, X, régi érték) naplóbejegyzést azelőtt kell a lemezre írni, mielőtt az X új értékét a lemezre írná a rendszer.
+- U2. Ha a tranzakció hibamentesen befejeződött, akkor a COMMIT naplóbejegyzést csak azután szabad a lemezre írni, ha a tranzakció által módosított összes adatbáziselem már a lemezre íródott, de ezután rögtön.
+
+Undo naplózás esetén a lemezre írás sorrendje - Az adatbáziselemek módosítására vonatkozó naplóbejegyzések.
+- Maguk a módosított adatbáziselemek.
+- A COMMIT naplóbejegyzés. Az első két lépés minden módosított adatbáziselemre vonatkozóan önmagában, külön-külön végrehajtandó (nem lehet a tranzakció több módosítására csoportosan megtenni)!
+
+A naplóbejegyzések lemezre írásának kikényszerítésére a naplókezelőnek szüksége van a FLUSH LOG műveletre, mely felszólítja a pufferkezelőt az összes korábban még ki nem írt naplóblokk lemezre való kiírására.
+
+Helyreállítás UNDO napló alapján:
+A helyreállítás-kezelő feladata a napló használatával az adatbázist konzisztens állapotba visszaállítani. A helyreállítás-kezelő a naplót a végétől kezdi átvizsgálni (tehát az utoljára felírt bejegyzéstől a korábban felírtak irányában).
+
+- Ha ugyanerre a T tranzakcióra vonatkozó COMMIT bejegyzéssel már találkozott, akkor nincs teendője, T rendesen befejeződött, hatásait nem kell tehát semmissé tenni.
+- Minden más esetben T nem teljes vagy abortált tranzakció. A helyreállítás-kezelő az adatbáziselem értékét visszaállítjuk a régi értékre.
+- Minden abortált vagy nem teljes tranzakcióra vonatkozóan <ABORT T> naplóbejegyzést ír a naplóba és kiváltja annak naplófájlba való kiírását is (FLUSH LOG).
+
+Ellenőrzőpont: CHECKPOINT képzése:
+- Megtiltjuk az új tranzakciók indítását.
+- Megvárjuk, amíg minden futó tranzakció COMMIT vagy ABORT módon véget ér.
+- A naplót a pufferből a háttértárra írjuk (FLUSH LOG),
+- Az adategységeket a pufferből a háttértárra írjuk.
+- A naplóba beírjuk, hogy CHECKPOINT.
+- A naplót újra a háttértárra írjuk: FLUSH LOG.
+- Újra fogadjuk a tranzakciókat. Ezután nyilván elég az első CHECKPOINT-ig visszamenni, hiszen előtte minden T i már valahogy befejeződött.
+
+Probléma: Hosszú ideig tarthat, amíg az aktív tranzakciók befejeződnek. (Új tranzakciókat sokáig nem lehet kiszolgálni.) Megoldás: CHECKPOINT képzése működés közben. A módszer lépései:
+- <START CKPT(T 1,…,T k)> naplóbejegyzés készítése, majd lemezre írása (FLUSH LOG), ahol T 1,…,T k az éppen aktív tranzakciók nevei.
+- Meg kell várni a T 1,…,T k tranzakciók mindegyikének normális vagy abnormális befejeződését, nem tiltva közben újabb tranzakciók indítását.
+- Ha a T 1,…,T k tranzakciók mindegyike befejeződött, akkor <END CKPT> naplóbejegyzés elkészítése, majd lemezre írása (FLUSH LOG).
+
+Készítette: Utolsó módosítás: Gerstweiler Anikó Éva, Molnár Dávid 2011.01.08.

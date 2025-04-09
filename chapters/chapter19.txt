@@ -1,0 +1,79 @@
+Title: 19. Adatbázis tükrözése.
+
+*Adatbázis tükrözése (mirroring):*
+Az adatbázis tükrözése egy olyan magas rendelkezésre állást (high availability) biztosító megoldás, amely két vagy több adatbázis-kiszolgáló között működik. A tükrözés során az adatbázis egy vagy több teljes másolatát tároljuk különböző szervereken.
+
+**Főbb jellemzői:**
+- Az adatbázis tartalmának egyidejű tárolása két vagy több helyen
+- Automatikus átállás hiba esetén (failover)
+- Adatvédelem a tranzakciónaplók továbbításával
+- Elsődleges (primary) és másodlagos (mirror) szerverek közötti szinkronizáció
+
+*Tükrözési üzemmódok:*
+
+**1. Szinkron tükrözés:**
+- A tranzakciók csak akkor tekinthetők véglegesítettnek (commit), ha mindkét szerveren megtörtént a rögzítés
+- Magas adatbiztonság, de lassabb működés
+- Garantálja, hogy hiba esetén nincs adatvesztés
+- A szinkron módban működő rendszerekhez általában tanú (witness) szerver is társul
+
+**2. Aszinkron tükrözés:**
+- A tranzakciók véglegesítése az elsődleges szerveren történik, az adatok később kerülnek át a másodlagos szerverre
+- Gyorsabb működés, de hiba esetén adatvesztés előfordulhat
+- Nagyobb földrajzi távolságok esetén hasznos
+
+*Tükrözési résztvevők:*
+
+**Elsődleges szerver (Primary):**
+- Fogadja az összes adatbázis-tranzakciót
+- A teljes írási/olvasási funkcionalitással rendelkezik
+- A tranzakciónaplókat küldi a másodlagos szervernek
+
+**Másodlagos szerver (Mirror):**
+- Az elsődleges szervertől kapott tranzakciónaplók alapján frissíti az adatbázist
+- Szinkron módban csak olvasható, aszinkron módban nem elérhető, amíg nem válik elsődlegessé
+- Hiba esetén automatikusan átveheti az elsődleges szerepét
+
+**Tanú szerver (Witness):**
+- Csak a szinkron módban használatos
+- Nem tárolja az adatbázis tartalmát
+- Feladata a kvórum biztosítása és az automatikus átállás elősegítése
+- Támogatja a többségi döntéshozatalt
+
+*Automatikus átállás (failover) folyamata:*
+1. Az elsődleges szerver meghibásodik
+2. A tanú szerver és a másodlagos szerver kommunikálnak
+3. A másodlagos szerver átmegy elsődleges állapotba
+4. Az alkalmazások az új elsődleges szerverhez kapcsolódnak
+5. Az eredeti elsődleges szerver javítása után újra beállhat a rendszerbe, de már másodlagos szerepben
+
+*Előnyök:*
+- Magas rendelkezésre állás
+- Katasztrófa utáni gyors helyreállítás
+- Minimális vagy nulla adatvesztés
+- Terheléselosztás lehetősége (olvasási műveletek a másodlagos szerveren)
+
+*Hátrányok:*
+- Többletköltség (hardver, licencek)
+- Hálózati sávszélességet igényel
+- Szinkron módban teljesítménycsökkenés léphet fel
+- Komplex konfigurációs és felügyeleti igények
+
+*Kiegészítő technológiák:*
+- **Adatreplikáció**: Adatok másolása több adatbázis között
+- **Log shipping**: Tranzakciónaplók rendszeres továbbítása és alkalmazása
+- **Always On**: A Microsoft SQL Server magas rendelkezésre állási megoldása, amely tükrözést és failover cluster funkciót is tartalmaz
+- **Párhuzamos adatbázisok**: Több független adatbázis szinkronizált működése
+
+Időbélyegzés, érvényesítés. Ez	
+  a	
+  tétel	
+  nem	
+  fog	
+  szerepelni	
+  vizsgán! Készítette: Utolsó	
+  módosítás: Gerstweiler	
+  Anikó	
+  Éva,	
+  Molnár	
+  Dávid 2011.01.08.

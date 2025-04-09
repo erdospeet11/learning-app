@@ -1,0 +1,121 @@
+Title: 13. Adatbázis biztonság, jogosultságkezelés, titkosítás, támadási módok, védekezés, audit.
+
+*Adatbázis biztonság alapfogalmai:*
+Az adatbázis biztonság célja, hogy a felhasználók csak a számukra engedélyezett adatokat érhessék el, és csak a számukra engedélyezett műveleteket hajthassák végre. A biztonság három fő szempontja:
+
+- **Bizalmasság (Confidentiality)**: Az adatok védelme illetéktelen hozzáféréstől.
+- **Integritás (Integrity)**: Az adatok pontosságának és konzisztenciájának biztosítása.
+- **Rendelkezésre állás (Availability)**: Az adatok elérhetőségének biztosítása a jogosult felhasználók számára.
+
+*Fenyegetések és támadási módok:*
+Az adatbázisokat különböző fenyegetések érhetik:
+
+1. **Privilegizált hozzáférés elvesztése**: Rendszergazdai jogosultságok illetéktelen kezekbe kerülése.
+2. **SQL Injection**: Kódbeszúrás SQL parancsokba illegális adatelérés céljából.
+   - Példa: `SELECT * FROM users WHERE name = 'x' OR '1'='1'`
+3. **Puffer túlcsordulás**: Nem ellenőrzött bemenet miatt memóriatúlcsordulás, ami kódfuttatást eredményezhet.
+4. **Man-in-the-Middle támadás**: A támadó az adatforgalom közbeiktatásával lehallgathatja vagy módosíthatja az adatokat.
+5. **Jelszó feltörés**: Gyenge jelszavak feltörése szótár alapú vagy brute force támadással.
+6. **Social engineering**: Felhasználók manipulálása bizalmas információk megszerzése céljából.
+7. **Malware**: Kártékony szoftverek telepítése az adatbázis-rendszeren.
+
+*Jogosultságkezelés:*
+A jogosultságkezelés módszerei:
+
+1. **Diszkrécionális hozzáférés-vezérlés (DAC)**: A tulajdonos dönti el, ki férhet hozzá az adatokhoz.
+   - SQL példa: `GRANT SELECT ON tablename TO username;`
+
+2. **Kötelező hozzáférés-vezérlés (MAC)**: A rendszer határozza meg a hozzáférést biztonsági szintek alapján.
+   - Minősítési szintek: titkos, bizalmas, korlátozott, nyilvános
+
+3. **Szerepkör-alapú hozzáférés-vezérlés (RBAC)**: A felhasználók szerepköröket kapnak, a jogosultságok a szerepkörhöz kötődnek.
+   - SQL példa: 
+     ```sql
+     CREATE ROLE analyst;
+     GRANT SELECT ON sales_data TO analyst;
+     GRANT analyst TO user1;
+     ```
+
+*SQL jogosultságok:*
+SQL-ben a következő jogosultságfajtákat különböztetjük meg:
+
+- **SELECT**: Adatlekérdezési jog
+- **INSERT**: Új sorok beszúrásának joga
+- **UPDATE**: Meglévő sorok módosításának joga
+- **DELETE**: Sorok törlésének joga
+- **REFERENCES**: Hivatkozási jog (idegen kulcs létrehozása)
+- **ALTER**: Séma módosításának joga
+- **INDEX**: Indexek létrehozása és törlése
+- **ALL PRIVILEGES**: Minden jog megadása
+
+Jogok megadása és visszavonása:
+```sql
+GRANT privilege_list ON object TO user_list [WITH GRANT OPTION];
+REVOKE privilege_list ON object FROM user_list [CASCADE | RESTRICT];
+```
+
+*Titkosítás:*
+Az adatok védelme titkosítási technikákkal:
+
+1. **Transzparens adattitkosítás (TDE)**: Az adatbáziskezelő rendszer automatikusan titkosítja az adatokat, amikor a lemezre írja, és visszafejti, amikor a memóriába olvassa.
+
+2. **Oszlopszintű titkosítás**: Csak bizonyos érzékeny adatokat tartalmazó oszlopok titkosítása.
+   ```sql
+   CREATE TABLE customers (
+     id INT,
+     name VARCHAR(100),
+     credit_card VARCHAR(16) ENCRYPTED WITH (ALGORITHM = 'AES', KEY = 'encryption_key')
+   );
+   ```
+
+3. **Kliens oldali titkosítás**: Az adatok titkosítása még az adatbázisba való bekerülés előtt.
+
+4. **Hashing**: Jelszavak és érzékeny adatok egyirányú titkosítása.
+   ```sql
+   INSERT INTO users (username, password_hash) 
+   VALUES ('john', HASH('password123'));
+   ```
+
+*Titkosítási algoritmusok:*
+- **Szimmetrikus titkosítás**: Ugyanazt a kulcsot használja a titkosításhoz és a visszafejtéshez (AES, DES)
+- **Aszimmetrikus titkosítás**: Nyilvános és privát kulcspárt használ (RSA, ECC)
+- **Hash függvények**: Egyirányú függvények, amelyekből nem lehet visszafejteni az eredeti adatot (SHA-256, bcrypt)
+
+*Adatbázis audit:*
+Az adatbázis auditálása az adatelérések és -módosítások rendszeres ellenőrzését jelenti:
+
+1. **Auditálási lehetőségek**:
+   - Ki, mikor, milyen adatokat ért el vagy módosított
+   - Sikertelen belépési kísérletek naplózása
+   - Jogosultságváltozások követése
+   - Adatbázis sémaváltozások követése
+
+2. **Audit implementálása SQL-ben**:
+   ```sql
+   CREATE AUDIT POLICY data_access_policy
+   ACTIONS SELECT, INSERT, UPDATE, DELETE ON schema.table
+   WHEN 'TRUE'
+   EVALUATED PER SESSION;
+   
+   AUDIT POLICY data_access_policy;
+   ```
+
+*Védekezési stratégiák:*
+1. **Biztonsági mentések**: Rendszeres időközönként készített, és biztonságosan tárolt mentések.
+2. **Patch menedzsment**: Biztonsági frissítések rendszeres telepítése.
+3. **Tűzfalak**: Adatbázis tűzfalak használata a rosszindulatú kérések szűrésére.
+4. **Behatolás-észlelő rendszerek**: Gyanús tevékenységek észlelése és riasztás.
+5. **Least Privilege elve**: Minimálisan szükséges jogosultságok biztosítása.
+6. **Biztonságos fejlesztési gyakorlatok**: Paraméterezett lekérdezések használata SQL Injection ellen.
+7. **Adatok maszkolása**: Érzékeny adatok elrejtése jogosultsággal nem rendelkező felhasználók elől.
+
+*Biztonsági ellenőrzőlista:*
+- Erős jelszavak és jelszókezelési szabályzatok
+- Két faktoros hitelesítés (2FA) bevezetése
+- Rendszeres biztonsági auditok végrehajtása
+- Titkosítási technikák megfelelő alkalmazása
+- Hálózati forgalom titkosítása (SSL/TLS)
+- Adatbázis-felhasználók rendszeres felülvizsgálata
+- Nincs beégetett jelszó az alkalmazáskódban
+- Védelem az SQL Injection ellen (paraméterezett lekérdezések)
+- Rendszeres biztonsági mentések és helyreállítási tesztek

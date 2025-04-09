@@ -1,0 +1,179 @@
+Title: 10. Adatbázis-kezelő rendszerek komponenseinek architektúrája és feladata
+
+*Adatbázis-kezelő rendszerek komponensei*
+
+Az adatbázis-kezelő rendszerek (DBMS) több komponensből épülnek fel, amelyek együttesen biztosítják az adatok hatékony tárolását, elérését és kezelését. Az architektúra általában a következő fő komponenseket tartalmazza:
+
+*1. Lekérdezés-feldolgozó (Query Processor)*
+- *Feladata*: A felhasználói lekérdezések feldolgozása, optimalizálása és végrehajtása.
+- *Komponensei*:
+  - Lekérdezés-elemző (Query Parser): Szintaktikai elemzés, lekérdezési fa létrehozása
+  - Lekérdezés-optimalizáló (Query Optimizer): A végrehajtási terv optimalizálása, költségalapú tervezés
+  - Lekérdezés-végrehajtó (Query Executor): A kiválasztott végrehajtási terv végrehajtása
+
+*2. Adatkezelő (Data Manager)*
+- *Feladata*: Az adatok fizikai tárolásának és hozzáférésének kezelése.
+- *Komponensei*:
+  - Puffer-kezelő (Buffer Manager): Memóriában tárolt adatlapok kezelése, csere stratégiák
+  - File-kezelő és hozzáférési módszerek (File and Access Methods): Adatfájlok kezelése, indexek
+  - Lemezkezelő (Disk Manager): Fizikai adattárolás a lemezen
+
+*3. Tranzakciókezelő (Transaction Manager)*
+- *Feladata*: A tranzakciók ACID tulajdonságainak biztosítása.
+- *Komponensei*:
+  - Konkurenciakezelő (Concurrency Control Manager): Zárolások, időbélyegek kezelése
+  - Helyreállítás-kezelő (Recovery Manager): Naplózás, helyreállítás hiba esetén
+  - Ütemező (Scheduler): Tranzakciók végrehajtásának ütemezése
+
+*4. Metaadat-kezelő (Metadata Manager)*
+- *Feladata*: Az adatbázis-sémák, jogosultságok és egyéb metaadatok kezelése.
+- *Komponensei*:
+  - Katalógus-kezelő (Catalog Manager): Adatbázis objektumok metaadatainak tárolása
+  - Jogosultságkezelő (Authorization Manager): Hozzáférési jogosultságok ellenőrzése
+
+*5. Kommunikációs menedzser (Communication Manager)*
+- *Feladata*: Hálózati kommunikáció kezelése, kliens-szerver architektúra támogatása.
+- *Komponensei*:
+  - Hálózati interfész (Network Interface): Hálózati protokollok kezelése
+  - Kliens-szerver protokoll (Client-Server Protocol): Kommunikációs szabályok
+
+*6. Segédprogramok (Utilities)*
+- *Feladata*: Adminisztrációs és karbantartási feladatok támogatása.
+- *Komponensei*:
+  - Biztonsági mentés és helyreállítás (Backup and Recovery)
+  - Import/Export eszközök (Import/Export Tools)
+  - Teljesítményfigyelés (Performance Monitoring)
+  - Adatbázis-adminisztráció (Database Administration)
+
+*Puffer-kezelő*
+
+A puffer-kezelő felelős az adatbázis és a memória közötti adatforgalom irányításáért. Fő feladatai:
+
+- Adatlapok betöltése a lemezről a memóriába
+- Adatlapok nyomon követése a pufferben (buffer pool)
+- Módosított lapok lemezre írása (flush)
+- Puffercsere-stratégiák implementálása (pl. LRU, CLOCK)
+- Hosszú tranzakciók kezelése (pinning)
+
+*Puffercserélési stratégiák*:
+- LRU (Least Recently Used): A legrégebben használt lapot cseréli ki
+- CLOCK: Az LRU közelítése kisebb adminisztrációs költséggel
+- LRU-K: K darab legutóbbi hozzáférés figyelembevétele
+- Hot/Cold stratégiák: Gyakran és ritkán használt lapok megkülönböztetése
+
+*Hozzáférési módszerek*
+
+A hozzáférési módszerek meghatározzák, hogyan éri el az adatbázis-kezelő rendszer a tárolt adatokat. A főbb módszerek:
+
+*1. Szekvenciális hozzáférés*:
+- Az adatlapok sorrendjében történő olvasás
+- Teljes tábla átvizsgálásánál használatos (table scan)
+- Előnye az egyszerűség, hátránya a lassú keresés
+
+*2. Indexelt hozzáférés*:
+- *B+-fa indexek*: Kiegyensúlyozott fa struktúra, gyors keresés, beszúrás, törlés
+- *Hash indexek*: Konstans idejű keresés egyenlőség alapján
+- *Bitmap indexek*: Alacsony kardinalitású attribútumokra optimalizálva
+- *R-fa*: Térbeli adatok indexelésére
+
+*3. Hash-alapú hozzáférés*:
+- Hash függvény használata a rekordok gyors lokalizálására
+- Statikus és dinamikus hash-elés (pl. extendible hashing)
+- Csak egyenlőségi keresésekre hatékony
+
+*Lekérdezés-optimalizálás*
+
+A lekérdezés-optimalizálás célja a leghatékonyabb végrehajtási terv kiválasztása egy adott lekérdezéshez. A folyamat lépései:
+
+1. *Lekérdezés elemzése*:
+   - Szintaktikai elemzés (parsing)
+   - Szemantikai elemzés (type checking)
+   - Lekérdezés fa (query tree) létrehozása
+
+2. *Logikai optimalizálás*:
+   - Algebrai átalakítások (pl. szelekciók, projekciók áthelyezése)
+   - Ekvivalens kifejezések generálása
+   - Normalizálás
+
+3. *Fizikai optimalizálás*:
+   - Hozzáférési utak kiválasztása (access path selection)
+   - Join metódusok kiválasztása (nested loop, hash join, merge join)
+   - Join sorrend meghatározása
+   - Költségbecslés alapján a legjobb terv kiválasztása
+
+4. *Költségbecslés tényezői*:
+   - CPU-költség (processzor-idő)
+   - I/O-költség (lemezműveletek)
+   - Memóriahasználat
+   - Kommunikációs költség (elosztott rendszereknél)
+
+*Tranzakciókezelés*
+
+A tranzakciókezelés felelős az ACID tulajdonságok (Atomicity, Consistency, Isolation, Durability) biztosításáért. Főbb komponensei:
+
+*1. Konkurenciakezelés*:
+   - *Zárolási módszerek*:
+     - Kétfázisú zárolás (2PL)
+     - Többverziós konkurenciakezelés (MVCC)
+   - *Zárolási granularitás*:
+     - Rekord szintű zárolás
+     - Oldal szintű zárolás
+     - Tábla szintű zárolás
+
+*2. Helyreállítás*:
+   - *Naplózási technikák*:
+     - Write-Ahead Logging (WAL)
+     - Redo és Undo naplózás
+   - *Ellenőrzőpontok (checkpoints)*:
+     - Periodikus állapotmentés
+     - Helyreállítási idő csökkentése
+   - *Helyreállítási algoritmusok*:
+     - ARIES (Algorithm for Recovery and Isolation Exploiting Semantics)
+
+*Elosztott adatbázisok*
+
+Az elosztott adatbázis-kezelő rendszerek több, hálózaton összekapcsolt csomóponton tárolják és kezelik az adatokat. Főbb kihívások és megoldások:
+
+*1. Elosztott lekérdezés-feldolgozás*:
+   - Lekérdezések felbontása részlekérdezésekre
+   - Adatátvitel minimalizálása
+   - Párhuzamos végrehajtás
+
+*2. Elosztott tranzakciókezelés*:
+   - Kétfázisú véglegesítés (2PC)
+   - Háromfázisú véglegesítés (3PC)
+   - Paxos és Raft konszenzus algoritmusok
+
+*3. Replikáció*:
+   - Szinkron vs. aszinkron replikáció
+   - Master-slave és multi-master architektúrák
+   - Konzisztencia-modellek (erős, gyenge, végül konzisztens)
+
+*4. Particionálás (sharding)*:
+   - Horizontális particionálás (sorok szerinti)
+   - Vertikális particionálás (oszlopok szerinti)
+   - Particionálási stratégiák (hash, range, list)
+
+*Adatbázis-biztonság*
+
+Az adatbázis-biztonság az adatok védelméről gondoskodik az illetéktelen hozzáféréssel, módosítással és károsodással szemben:
+
+*1. Hozzáférés-vezérlés*:
+   - Felhasználói azonosítás és hitelesítés
+   - Jogosultságkezelés (GRANT, REVOKE)
+   - Role-based access control (RBAC)
+
+*2. Adatvédelem*:
+   - Titkosítás (transzparens adattitkosítás)
+   - Adatmaszkolás
+   - Adatszivárgás megelőzése
+
+*3. Auditálás*:
+   - Tevékenységek naplózása
+   - Biztonsági események figyelése
+   - Megfelelőség ellenőrzése
+
+*4. Biztonsági mentés és helyreállítás*:
+   - Teljes és inkrementális mentések
+   - Point-in-time recovery
+   - Katasztrófa utáni helyreállítás
